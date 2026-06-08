@@ -1,0 +1,10 @@
+**/bin
+**/obj
+.git
+.idea
+MeuAcervoAPI
+*.user
+*.suo
+*.cache
+*.pdb
+docker-compose.override.yml

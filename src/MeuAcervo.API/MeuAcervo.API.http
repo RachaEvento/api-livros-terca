@@ -1,0 +1,4 @@
+@MeuAcervo.API_HostAddress = http://localhost:8080
+
+GET {{MeuAcervo.API_HostAddress}}/api/v1/system/info
+Accept: application/json

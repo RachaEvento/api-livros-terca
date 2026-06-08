@@ -1,0 +1,42 @@
+services:
+  postgres:
+    image: postgres:17-alpine
+    container_name: meuacervo-postgres
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-meuacervo}
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-meuacervo}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: meuacervo-api
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      ASPNETCORE_ENVIRONMENT: ${ASPNETCORE_ENVIRONMENT:-Development}
+      ASPNETCORE_URLS: ${ASPNETCORE_URLS:-http://+:8080}
+      ConnectionStrings__DefaultConnection: ${ConnectionStrings__DefaultConnection:-Host=postgres;Port=5432;Database=meuacervo;Username=postgres;Password=postgres}
+      Jwt__Key: ${Jwt__Key:-change-this-super-secret-key-in-production-with-at-least-32-characters}
+      Jwt__Issuer: ${Jwt__Issuer:-MeuAcervo}
+      Jwt__Audience: ${Jwt__Audience:-MeuAcervo.Clients}
+      Jwt__AccessTokenMinutes: ${Jwt__AccessTokenMinutes:-15}
+      Jwt__RefreshTokenDays: ${Jwt__RefreshTokenDays:-30}
+      BookProviders__OpenLibrary__BaseUrl: ${BookProviders__OpenLibrary__BaseUrl:-https://openlibrary.org}
+      Database__ApplyMigrationsOnStartup: ${Database__ApplyMigrationsOnStartup:-true}
+    ports:
+      - "8080:8080"
+
+volumes:
+  postgres_data:
