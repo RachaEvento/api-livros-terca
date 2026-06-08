@@ -5,6 +5,7 @@ using Microsoft.Extensions.DependencyInjection;
 using MeuAcervo.Application.Abstractions.Auth;
 using MeuAcervo.Application.Abstractions.Books;
 using MeuAcervo.Application.Abstractions.Infrastructure;
+using MeuAcervo.Application.Abstractions.Library;
 using MeuAcervo.Application.Models.Books;
 using MeuAcervo.Infrastructure.Data;
 using MeuAcervo.Infrastructure.Providers.OpenLibrary;
@@ -34,6 +35,7 @@ public static class DependencyInjection
 
         services.AddScoped<IIdentityRepository, IdentityRepository>();
         services.AddScoped<IBookCatalogRepository, BookCatalogRepository>();
+        services.AddScoped<IUserLibraryRepository, UserLibraryRepository>();
         services.AddScoped<IPasswordHasherService, PasswordHasherService>();
         services.AddScoped<IAuthTokenService, AuthTokenService>();
         services.AddScoped<IApplicationDbContext>(serviceProvider => serviceProvider.GetRequiredService<ApplicationDbContext>());

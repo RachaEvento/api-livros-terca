@@ -1,93 +1,106 @@
-# Acervo do Usuário
+# Acervo do Usuario
 
 ## Objetivo
 
-Representar a experiência principal do produto: a relação do usuário com livros, formatos, leitura, organização e histórico.
+Representar a experiencia principal do produto: a relacao do usuario com livros, formatos, leitura, organizacao e historico.
 
 ## Entidade central
 
 - `UserLibraryItem`
 
-## Capacidades obrigatórias
+## Capacidades obrigatorias
 
 - adicionar item ao acervo
-- adicionar item à wishlist
+- adicionar item a wishlist
 - atualizar status de leitura
 - registrar progresso
 - favoritar
 - informar formato
-- informar localização física
-- informar estado de conservação
+- informar localizacao fisica
+- informar estado de conservacao
 - registrar quantidade de leituras
 - armazenar notas privadas
 
-## Campos de negócio recomendados
+## Campos de negocio recomendados
 
 - `ShelfType`
 - `ReadingStatus`
 - `AcquisitionFormat`
+- `OwnershipType`
 - `IsFavorite`
 - `CurrentPage`
 - `ProgressPercent`
 - `ReadCount`
 - `StartedAt`
 - `FinishedAt`
+- `AcquiredAt`
 - `PhysicalLocation`
 - `Condition`
 - `PrivateNotes`
 
-## Regras de domínio
+## Regras de dominio
 
-- item em `Wishlist` pode não ter progresso
-- item `Completed` deve ter `FinishedAt` ou progresso final compatível
-- item `Reading` pode gerar múltiplos registros em `ReadingProgressEntry`
-- `ReadCount` aumenta quando o status é concluído novamente
-- empréstimos só se aplicam a formatos emprestáveis definidos pela regra de negócio
+- item em `Wishlist` pode existir sem progresso
+- item `Completed` deve ter `FinishedAt` ou progresso final compativel
+- item `Reading` pode gerar multiplos registros em `ReadingProgressEntry`
+- `ReadCount` aumenta quando o status e concluido novamente
+- emprestimos so se aplicam a formatos emprestaveis definidos pela regra de negocio
+- na v1, existe no maximo um `UserLibraryItem` ativo por `usuario + edicao`
+- exclusao do item do acervo e logica; um item soft-deletado deixa de aparecer nas consultas e libera uma nova inclusao da mesma edicao
+- registrar progresso em item da `Wishlist` deve ser rejeitado
+- progresso final ou conclusao pode atualizar o item para `Completed`
 
-## Filtros mínimos esperados
+## Filtros minimos esperados
 
 - por status de leitura
 - por shelf
 - por favorito
 - por formato
-- por tag
 - por autor
-- por título
-- por data de atualização
+- por titulo
+- por data de atualizacao
 
-## Ordenação mínima esperada
+Observacao da v1:
 
-- título
+- filtro por tag entra quando o modulo de tags for materializado
+
+## Ordenacao minima esperada
+
+- titulo
 - autor principal
-- data de criação
-- data de atualização
-- nota
+- data de criacao
+- data de atualizacao
 - progresso
-- data de conclusão
+- data de conclusao
+
+Observacao da v1:
+
+- ordenacao por nota publicada depende do modulo de reviews e fica para fase posterior
 
 ## Busca no acervo
 
 A busca interna deve considerar:
 
-- título da obra
-- título da edição
+- titulo da obra
+- titulo da edicao
 - autores
-- tags
-- notas públicas ou privadas quando apropriado
+- notas privadas quando apropriado
 
-## Paginação
+## Paginacao
 
 Toda listagem do acervo deve ser paginada para suportar grande volume de itens.
 
-## Histórico de progresso
+## Historico de progresso
 
-`ReadingProgressEntry` é recomendado para guardar:
+`ReadingProgressEntry` e recomendado para guardar:
 
-- página ou percentual
+- pagina ou percentual
 - data do registro
-- observação opcional
+- observacao opcional
 
-Isso permite mostrar leituras recentes e construir estatísticas futuras.
+Na v1, o registro de progresso tambem deve sincronizar `CurrentPage` e `ProgressPercent` no `UserLibraryItem`.
+
+Isso permite mostrar leituras recentes e construir estatisticas futuras.
 
 ## API sugerida
 
@@ -99,6 +112,32 @@ Isso permite mostrar leituras recentes e construir estatísticas futuras.
 - `POST /api/v1/library-items/{id}/progress`
 - `DELETE /api/v1/library-items/{id}`
 
-## Observação importante
+### Contratos operacionais recomendados na v1
 
-O acervo não substitui o catálogo global. Ele o referencia e adiciona comportamento específico do usuário.
+`POST /api/v1/library-items`:
+
+- recebe `BookEditionId`
+- recebe `ShelfType`
+- pode receber status inicial, favorito, notas privadas e metadados de posse
+- nunca recebe `TenantId` ou `UserId` do cliente
+
+`GET /api/v1/library-items`:
+
+- usa `pageNumber` e `pageSize`
+- aceita `sortBy` e `sortDirection`
+- aceita filtros como `shelfType`, `readingStatus`, `isFavorite`, `acquisitionFormat`, `author`, `title` e `search`
+
+`PATCH /api/v1/library-items/{id}/status`:
+
+- altera apenas status e datas associadas a leitura
+- deve aplicar regra de incremento de `ReadCount` quando houver nova conclusao
+
+`POST /api/v1/library-items/{id}/progress`:
+
+- cria `ReadingProgressEntry`
+- atualiza snapshot de progresso do item
+- pode alterar o status para `Reading`, `Rereading` ou `Completed` conforme o caso
+
+## Observacao importante
+
+O acervo nao substitui o catalogo global. Ele o referencia e adiciona comportamento especifico do usuario.

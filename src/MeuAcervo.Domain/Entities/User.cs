@@ -27,4 +27,6 @@ public sealed class User : TenantScopedAuditableEntityBase
     public ICollection<UserRole> UserRoles { get; set; } = new List<UserRole>();
 
     public ICollection<RefreshToken> RefreshTokens { get; set; } = new List<RefreshToken>();
+
+    public ICollection<UserLibraryItem> UserLibraryItems { get; set; } = new List<UserLibraryItem>();
 }

@@ -1,8 +1,10 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Metadata;
 using MeuAcervo.Application.Abstractions.Infrastructure;
 using MeuAcervo.Domain.Common;
 using MeuAcervo.Domain.Entities;
 using MeuAcervo.Domain.Interfaces;
+using System.Linq.Expressions;
 
 namespace MeuAcervo.Infrastructure.Data;
 
@@ -39,9 +41,14 @@ public sealed class ApplicationDbContext : DbContext, IApplicationDbContext
 
     public DbSet<ExternalBookReference> ExternalBookReferences => Set<ExternalBookReference>();
 
+    public DbSet<UserLibraryItem> UserLibraryItems => Set<UserLibraryItem>();
+
+    public DbSet<ReadingProgressEntry> ReadingProgressEntries => Set<ReadingProgressEntry>();
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.ApplyConfigurationsFromAssembly(typeof(AssemblyMarker).Assembly);
+        ApplySoftDeleteQueryFilters(modelBuilder);
         base.OnModelCreating(modelBuilder);
     }
 
@@ -96,6 +103,29 @@ public sealed class ApplicationDbContext : DbContext, IApplicationDbContext
             {
                 auditableEntity.UpdatedAtUtc = utcNow;
             }
+        }
+    }
+
+    private static void ApplySoftDeleteQueryFilters(ModelBuilder modelBuilder)
+    {
+        foreach (var entityType in modelBuilder.Model.GetEntityTypes())
+        {
+            if (!typeof(ISoftDeletable).IsAssignableFrom(entityType.ClrType))
+            {
+                continue;
+            }
+
+            var parameter = Expression.Parameter(entityType.ClrType, "entity");
+            var isDeletedProperty = Expression.Call(
+                typeof(EF),
+                nameof(EF.Property),
+                [typeof(bool)],
+                parameter,
+                Expression.Constant(nameof(ISoftDeletable.IsDeleted)));
+            var isNotDeleted = Expression.Equal(isDeletedProperty, Expression.Constant(false));
+            var lambda = Expression.Lambda(isNotDeleted, parameter);
+
+            entityType.SetQueryFilter(lambda);
         }
     }
 }

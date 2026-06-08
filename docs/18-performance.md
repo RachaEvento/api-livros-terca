@@ -19,6 +19,7 @@ Garantir boa experiência mesmo com acervos grandes, múltiplos filtros e integr
 - `TenantId, UserId, ShelfType`
 - `TenantId, UserId, ReadingStatus`
 - `TenantId, IsFavorite`
+- `TenantId, UserId, BookEditionId` unico parcial para itens ativos
 - `BookEditionId`
 - `UpdatedAtUtc`
 

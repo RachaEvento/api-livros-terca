@@ -1,11 +1,11 @@
-# Padrões de API
+# Padroes de API
 
-## Princípios
+## Principios
 
 - REST consistente
-- DTOs explícitos
-- paginação obrigatória em listagens
-- filtros previsíveis
+- DTOs explicitos
+- paginacao obrigatoria em listagens
+- filtros previsiveis
 - respostas padronizadas
 
 ## Base route
@@ -14,11 +14,11 @@
 /api/v1
 ```
 
-## Convenção de endpoints
+## Convencao de endpoints
 
 - recursos no plural
-- ações especiais como sub-recursos quando fizer sentido
-- evitar verbos no path, exceto operações de domínio específicas
+- acoes especiais como sub-recursos quando fizer sentido
+- evitar verbos no path, exceto operacoes de dominio especificas
 
 ## Resposta de sucesso sugerida
 
@@ -32,7 +32,7 @@
 }
 ```
 
-Mesmo em endpoints técnicos e de bootstrap, o envelope deve permanecer consistente. Apenas respostas `204 No Content` podem ser retornadas sem corpo quando isso fizer mais sentido semântico.
+Mesmo em endpoints tecnicos e de bootstrap, o envelope deve permanecer consistente. Apenas respostas `204 No Content` podem ser retornadas sem corpo quando isso fizer mais sentido semantico.
 
 ## Resposta paginada sugerida
 
@@ -50,29 +50,29 @@ Mesmo em endpoints técnicos e de bootstrap, o envelope deve permanecer consiste
 }
 ```
 
-## Parâmetros de paginação
+## Parametros de paginacao
 
 - `pageNumber`
 - `pageSize`
 
 Limites sugeridos:
 
-- padrão `pageSize = 20`
-- máximo `pageSize = 100`
+- padrao `pageSize = 20`
+- maximo `pageSize = 100`
 
-## Parâmetros de ordenação
+## Parametros de ordenacao
 
 - `sortBy`
 - `sortDirection`
 
-Valores aceitos para direção:
+Valores aceitos para direcao:
 
 - `asc`
 - `desc`
 
 ## Filtros
 
-Filtros devem ser específicos por recurso, por exemplo:
+Filtros devem ser especificos por recurso, por exemplo:
 
 - `status`
 - `shelf`
@@ -81,31 +81,43 @@ Filtros devem ser específicos por recurso, por exemplo:
 - `author`
 - `search`
 
+No modulo de acervo da v1, o recurso `library-items` deve aceitar ao menos:
+
+- `shelfType`
+- `readingStatus`
+- `isFavorite`
+- `acquisitionFormat`
+- `author`
+- `title`
+- `search`
+- `updatedFrom`
+- `updatedTo`
+
 ## Versionamento
 
-Usar prefixo `/v1` na rota. Mudanças breaking futuras devem resultar em nova versão.
+Usar prefixo `/v1` na rota. Mudancas breaking futuras devem resultar em nova versao.
 
 ## Swagger/OpenAPI
 
-Obrigatório documentar:
+Obrigatorio documentar:
 
 - payloads de entrada
 - respostas de sucesso
 - respostas de erro
-- autenticação Bearer
+- autenticacao Bearer
 - exemplos de uso
 
-Na fundação da solução, Swagger também deve deixar visível:
+Na fundacao da solucao, Swagger tambem deve deixar visivel:
 
 - endpoint de health/readiness
-- endpoint técnico inicial de verificação da API
+- endpoint tecnico inicial de verificacao da API
 - esquema de erro padronizado
 - versionamento base em `/api/v1`
 
-## Idempotência
+## Idempotencia
 
-Operações de atualização devem ser idempotentes quando possível. Evitar efeitos colaterais ocultos em `GET`.
+Operacoes de atualizacao devem ser idempotentes quando possivel. Evitar efeitos colaterais ocultos em `GET`.
 
-## Observação
+## Observacao
 
-Mesmo com envelope padronizado, o conteúdo de erro deve seguir o padrão definido em `17-exception-handling.md`.
+Mesmo com envelope padronizado, o conteudo de erro deve seguir o padrao definido em `17-exception-handling.md`.

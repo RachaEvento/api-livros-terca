@@ -37,4 +37,6 @@ public sealed class BookEdition : AuditableEntityBase
     public ICollection<BookEditionAuthor> BookEditionAuthors { get; set; } = new List<BookEditionAuthor>();
 
     public ICollection<ExternalBookReference> ExternalBookReferences { get; set; } = new List<ExternalBookReference>();
+
+    public ICollection<UserLibraryItem> UserLibraryItems { get; set; } = new List<UserLibraryItem>();
 }
