@@ -2,15 +2,15 @@
 
 ## Objetivo
 
-Permitir que cada tenant crie metadados próprios sem exigir nova migration para cada campo novo.
+Permitir que cada tenant crie metadados proprios sem exigir nova migration para cada campo novo.
 
 ## Escopo da v1
 
-Na primeira versão, os campos customizados serão aplicados a:
+Na primeira versao, os campos customizados serao aplicados a:
 
 - `UserLibraryItem`
 
-O modelo deve, porém, permitir expansão futura para outras entidades.
+O modelo deve, porem, permitir expansao futura para outras entidades.
 
 ## Tipos suportados
 
@@ -20,18 +20,21 @@ O modelo deve, porém, permitir expansão futura para outras entidades.
 - `Boolean`
 - `List`
 
+Na v1, `List` representa selecao simples de uma opcao definida pelo tenant.
+
 ## Requisitos funcionais
 
-O usuário poderá:
+O usuario podera:
 
 - criar campo customizado
-- definir rótulo e chave interna
+- definir rotulo e chave interna
 - escolher tipo
-- marcar como obrigatório ou opcional
-- definir visibilidade pública
+- marcar como obrigatorio ou opcional
+- definir visibilidade publica
 - ativar ou desativar
 - reordenar
-- manter opções para campos do tipo lista
+- manter opcoes para campos do tipo lista
+- atribuir valores customizados a itens do acervo
 
 ## Modelagem recomendada
 
@@ -43,6 +46,7 @@ Campos sugeridos:
 - `TenantId`
 - `EntityType`
 - `Key`
+- `NormalizedKey`
 - `Label`
 - `DataType`
 - `IsRequired`
@@ -50,12 +54,14 @@ Campos sugeridos:
 - `IsActive`
 - `SortOrder`
 - `ConfigurationJson`
+- `IsDeleted`
+- `DeletedAtUtc`
 - `CreatedAtUtc`
 - `UpdatedAtUtc`
 
-Restrições:
+Restricoes:
 
-- unicidade de `TenantId + EntityType + Key`
+- unicidade de `TenantId + EntityType + NormalizedKey` para definicoes ativas
 
 ### CustomFieldOption
 
@@ -67,6 +73,8 @@ Campos sugeridos:
 - `Value`
 - `Label`
 - `SortOrder`
+- `CreatedAtUtc`
+- `UpdatedAtUtc`
 
 ### CustomFieldValue
 
@@ -81,55 +89,68 @@ Campos sugeridos:
 - `NumberValue`
 - `DateValue`
 - `BooleanValue`
-- `JsonValue`
+- `OptionValue`
 - `CreatedAtUtc`
 - `UpdatedAtUtc`
 
-## Estratégia de armazenamento
+## Estrategia de armazenamento
 
-Usar tabela de valores tipados, evitando um único campo texto para tudo. Isso facilita:
+Usar tabela de valores tipados, evitando um unico campo texto para tudo. Isso facilita:
 
-- validação
+- validacao
 - consulta
-- indexação seletiva
-- evolução do domínio
+- indexacao seletiva
+- evolucao do dominio
 
-## Regras de validação
+## Regras de validacao
 
 - somente um tipo de valor pode estar preenchido por registro
-- campos obrigatórios devem existir ao salvar o item
-- campos inativos não devem ser exigidos em novas escritas
-- valor de lista deve existir entre as opções da definição
+- campos obrigatorios devem existir em operacoes explicitas de atribuicao de custom fields
+- campos inativos nao devem ser exigidos em novas escritas
+- valor de lista deve existir entre as opcoes da definicao
+- a definicao deve pertencer ao mesmo tenant do item do acervo
 
-## Exposição pública
+## Exposicao publica
 
-Somente campos marcados como `IsPublic` podem aparecer no perfil público ou em endpoints públicos.
+Somente campos marcados como `IsPublic` podem aparecer no perfil publico ou em endpoints publicos.
 
 ## Impactos na API
 
-Os endpoints de item do acervo devem aceitar uma coleção de valores customizados, por exemplo:
+Os valores customizados devem usar contrato tipado, por exemplo:
 
 ```json
 [
   {
     "fieldKey": "purchase-price",
-    "value": 59.90
+    "numberValue": 59.90
   },
   {
     "fieldKey": "gifted-by",
-    "value": "Ana"
+    "textValue": "Ana"
+  },
+  {
+    "fieldKey": "reading-origin",
+    "optionValue": "gift"
   }
 ]
 ```
 
-O serviço de aplicação deve resolver `fieldKey` para `CustomFieldDefinition`.
+O servico de aplicacao deve resolver `fieldKey` para `CustomFieldDefinition`.
 
-## Índices recomendados
+## Endpoints recomendados da fase
 
-- `TenantId, EntityType, Key` em `CustomFieldDefinition`
+- `GET /api/v1/custom-fields`
+- `POST /api/v1/custom-fields`
+- `PUT /api/v1/custom-fields/{id}`
+- `DELETE /api/v1/custom-fields/{id}`
+- `PUT /api/v1/library-items/{id}/custom-fields`
+
+## Indices recomendados
+
+- `TenantId, EntityType, NormalizedKey` em `CustomFieldDefinition`
 - `TenantId, EntityType, EntityId` em `CustomFieldValue`
 - `CustomFieldDefinitionId` em `CustomFieldValue`
 
-## Decisão de design
+## Decisao de design
 
-Foi escolhida modelagem relacional flexível em vez de migration por campo, pois isso atende melhor ao objetivo do produto e preserva governança sobre validação e consulta.
+Foi escolhida modelagem relacional flexivel em vez de migration por campo, pois isso atende melhor ao objetivo do produto e preserva governanca sobre validacao e consulta.

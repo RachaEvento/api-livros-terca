@@ -1,6 +1,8 @@
 using FluentValidation;
+using MeuAcervo.Application.DTOs.CustomFields;
 using MeuAcervo.Application.Abstractions.Infrastructure;
 using MeuAcervo.Application.Abstractions.Library;
+using MeuAcervo.Application.Services.CustomFields;
 using MeuAcervo.Application.Common.Exceptions;
 using MeuAcervo.Application.DTOs.Library;
 using MeuAcervo.Application.Models.Library;
@@ -19,6 +21,7 @@ public sealed class UserLibraryService : IUserLibraryService
     private readonly IValidator<UpdateUserLibraryItemRequest> _updateUserLibraryItemRequestValidator;
     private readonly IValidator<UpdateUserLibraryItemStatusRequest> _updateUserLibraryItemStatusRequestValidator;
     private readonly IValidator<RegisterReadingProgressRequest> _registerReadingProgressRequestValidator;
+    private readonly ICustomFieldService _customFieldService;
 
     public UserLibraryService(
         IUserLibraryRepository userLibraryRepository,
@@ -27,7 +30,8 @@ public sealed class UserLibraryService : IUserLibraryService
         IValidator<CreateUserLibraryItemRequest> createUserLibraryItemRequestValidator,
         IValidator<UpdateUserLibraryItemRequest> updateUserLibraryItemRequestValidator,
         IValidator<UpdateUserLibraryItemStatusRequest> updateUserLibraryItemStatusRequestValidator,
-        IValidator<RegisterReadingProgressRequest> registerReadingProgressRequestValidator)
+        IValidator<RegisterReadingProgressRequest> registerReadingProgressRequestValidator,
+        ICustomFieldService customFieldService)
     {
         _userLibraryRepository = userLibraryRepository;
         _applicationDbContext = applicationDbContext;
@@ -36,6 +40,7 @@ public sealed class UserLibraryService : IUserLibraryService
         _updateUserLibraryItemRequestValidator = updateUserLibraryItemRequestValidator;
         _updateUserLibraryItemStatusRequestValidator = updateUserLibraryItemStatusRequestValidator;
         _registerReadingProgressRequestValidator = registerReadingProgressRequestValidator;
+        _customFieldService = customFieldService;
     }
 
     public async Task<PagedResult<UserLibraryItemListResponse>> GetItemsAsync(Guid tenantId, Guid userId, GetUserLibraryItemsRequest request, CancellationToken cancellationToken = default)
@@ -46,6 +51,7 @@ public sealed class UserLibraryService : IUserLibraryService
             request.Search?.Trim(),
             request.Title?.Trim(),
             request.Author?.Trim(),
+            request.TagId,
             request.ShelfType,
             request.ReadingStatus,
             request.IsFavorite,
@@ -116,7 +122,8 @@ public sealed class UserLibraryService : IUserLibraryService
         var item = await _userLibraryRepository.GetReadonlyItemAsync(tenantId, userId, itemId, includeProgressEntries: true, cancellationToken)
                    ?? throw new NotFoundException("Library item was not found for the authenticated user.");
 
-        return MapDetailResponse(item);
+        var customFields = await _customFieldService.GetLibraryItemValuesAsync(tenantId, item.Id, cancellationToken);
+        return MapDetailResponse(item, customFields);
     }
 
     public async Task<UserLibraryItemDetailResponse> UpdateItemAsync(Guid tenantId, Guid userId, Guid itemId, UpdateUserLibraryItemRequest request, CancellationToken cancellationToken = default)
@@ -438,7 +445,7 @@ public sealed class UserLibraryService : IUserLibraryService
             item.UpdatedAtUtc);
     }
 
-    private static UserLibraryItemDetailResponse MapDetailResponse(UserLibraryItem item)
+    private static UserLibraryItemDetailResponse MapDetailResponse(UserLibraryItem item, IReadOnlyCollection<CustomFieldValueResponse> customFields)
     {
         var progressEntries = item.ReadingProgressEntries
             .OrderByDescending(entry => entry.RecordedAtUtc)
@@ -450,6 +457,44 @@ public sealed class UserLibraryService : IUserLibraryService
                 entry.Notes))
             .ToArray();
 
-        return new UserLibraryItemDetailResponse(MapListResponse(item), progressEntries);
+        var tags = item.UserLibraryItemTags
+            .Select(link => link.Tag)
+            .Where(tag => tag is not null)
+            .OrderBy(tag => tag!.Name)
+            .Select(tag => new UserLibraryItemTagResponse(tag!.Id, tag.Name, tag.Slug, tag.Color))
+            .ToArray();
+
+        var review = item.Review is null
+            ? null
+            : new Application.DTOs.Reviews.ReviewResponse(
+                item.Review.Id,
+                item.Review.Rating,
+                item.Review.Title,
+                item.Review.Content,
+                item.Review.Visibility,
+                item.Review.ContainsSpoilers,
+                item.Review.PublishedAtUtc,
+                item.Review.CreatedAtUtc,
+                item.Review.UpdatedAtUtc);
+
+        var loans = item.Loans
+            .OrderByDescending(loan => loan.LoanedAtUtc)
+            .Select(loan =>
+            {
+                var status = loan.Status == LoanStatus.Active && loan.ReturnedAtUtc is null && loan.DueAtUtc.HasValue && loan.DueAtUtc.Value < DateTime.UtcNow
+                    ? LoanStatus.Overdue
+                    : loan.Status;
+
+                return new UserLibraryItemLoanSummaryResponse(
+                    loan.Id,
+                    loan.BorrowerName,
+                    loan.LoanedAtUtc,
+                    loan.DueAtUtc,
+                    loan.ReturnedAtUtc,
+                    status);
+            })
+            .ToArray();
+
+        return new UserLibraryItemDetailResponse(MapListResponse(item), progressEntries, tags, customFields, review, loans);
     }
 }

@@ -1,15 +1,15 @@
-# Empréstimos
+# Emprestimos
 
 ## Objetivo
 
-Controlar livros emprestados a terceiros sem transformar o sistema em um módulo completo de logística.
+Controlar livros emprestados a terceiros sem transformar o sistema em um modulo completo de logistica.
 
 ## Escopo da v1
 
-- registrar empréstimo
-- consultar empréstimos ativos e históricos
-- registrar devolução
-- opcionalmente marcar atraso
+- registrar emprestimo
+- consultar emprestimos ativos e historicos
+- registrar devolucao
+- opcionalmente marcar atraso por calculo
 
 ## Entidade sugerida
 
@@ -38,31 +38,34 @@ Campos:
 - `Lost`
 - `Cancelled`
 
-## Regras de domínio
+Na v1, `Overdue` pode ser tratado como status efetivo calculado a partir de `DueAtUtc` para emprestimos ainda ativos.
 
-- um item não pode ter mais de um empréstimo ativo ao mesmo tempo
-- somente itens emprestáveis podem ser emprestados
-- registrar devolução encerra o empréstimo
+## Regras de dominio
+
+- um item nao pode ter mais de um emprestimo ativo ao mesmo tempo
+- somente itens elegiveis podem ser emprestados
+- registrar devolucao encerra o emprestimo
 - status `Overdue` pode ser calculado a partir da data prevista
+- emprestimo e item devem pertencer ao mesmo tenant
 
 ## Regras de elegibilidade
 
-Por padrão, permitir empréstimo apenas para itens:
+Por padrao, permitir emprestimo apenas para itens:
 
-- do acervo, não da wishlist
-- não excluídos
-- não já emprestados
-- compatíveis com empréstimo físico ou regra equivalente
+- do acervo, nao da wishlist
+- nao excluidos
+- nao ja emprestados
+- com `AcquisitionFormat = Physical`
 
 ## API sugerida
 
 - `GET /api/v1/loans`
+- `GET /api/v1/loans/{id}`
 - `POST /api/v1/library-items/{id}/loans`
 - `PATCH /api/v1/loans/{id}/return`
-- `GET /api/v1/loans/{id}`
 
-## Evolução futura
+## Evolucao futura
 
-- lembretes automáticos
-- notificações
-- histórico analítico de atrasos
+- lembretes automaticos
+- notificacoes
+- historico analitico de atrasos

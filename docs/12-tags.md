@@ -2,11 +2,11 @@
 
 ## Objetivo
 
-Permitir classificação livre e personalizada dos itens do acervo.
+Permitir classificacao livre e personalizada dos itens do acervo.
 
 ## Escopo
 
-Tags são tenant-scoped e pertencem ao usuário ou tenant atual.
+Tags sao tenant-scoped e compartilhadas dentro do tenant atual. Na v1 isso equivale ao usuario autenticado, mas o modelo deve continuar valido para tenants multiusuario no futuro.
 
 ## Requisitos funcionais
 
@@ -30,29 +30,24 @@ Campos:
 - `Color`
 - `Description`
 - `IsDeleted`
+- `DeletedAtUtc`
 - `CreatedAtUtc`
 - `UpdatedAtUtc`
 
-Restrição:
+Restricao:
 
-- unicidade de `TenantId + Slug`
+- unicidade de `TenantId + Slug` para tags ativas
 
 ### UserLibraryItemTag
 
 Tabela de relacionamento N:N entre item e tag.
 
-## Regras de domínio
+## Regras de dominio
 
-- nome de tag deve ser único por tenant após normalização
-- tags excluídas logicamente não aparecem em novas associações
-- um item não pode receber a mesma tag duas vezes
-
-## Casos de uso
-
-- organizar leitura por gênero pessoal
-- marcar coleção especial
-- marcar prioridade
-- separar livros emprestados, relidos ou favoritos temáticos
+- nome de tag deve ser unico por tenant apos normalizacao
+- tags excluidas logicamente nao aparecem em novas associacoes
+- um item nao pode receber a mesma tag duas vezes
+- tag e item devem pertencer ao mesmo tenant
 
 ## API sugerida
 
@@ -63,6 +58,6 @@ Tabela de relacionamento N:N entre item e tag.
 - `POST /api/v1/library-items/{id}/tags`
 - `DELETE /api/v1/library-items/{id}/tags/{tagId}`
 
-## Exposição pública
+## Exposicao publica
 
-Tags só devem aparecer em endpoints públicos se forem consideradas parte visível do perfil e se isso for explicitamente permitido pelo produto.
+Tags so devem aparecer em endpoints publicos se forem consideradas parte visivel do perfil e se isso for explicitamente permitido pelo produto.

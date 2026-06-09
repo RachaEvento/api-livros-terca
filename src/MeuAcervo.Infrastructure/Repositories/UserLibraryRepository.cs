@@ -44,13 +44,13 @@ public sealed class UserLibraryRepository : IUserLibraryRepository
 
     public Task<UserLibraryItem?> GetTrackedItemAsync(Guid tenantId, Guid userId, Guid itemId, CancellationToken cancellationToken = default)
     {
-        return ReadItemGraph(tracking: true, includeProgressEntries: false)
+        return ReadItemGraph(tracking: true, includeProgressEntries: false, includeDetails: true)
             .FirstOrDefaultAsync(item => item.TenantId == tenantId && item.UserId == userId && item.Id == itemId, cancellationToken);
     }
 
     public Task<UserLibraryItem?> GetReadonlyItemAsync(Guid tenantId, Guid userId, Guid itemId, bool includeProgressEntries, CancellationToken cancellationToken = default)
     {
-        return ReadItemGraph(tracking: false, includeProgressEntries)
+        return ReadItemGraph(tracking: false, includeProgressEntries, includeDetails: true)
             .FirstOrDefaultAsync(item => item.TenantId == tenantId && item.UserId == userId && item.Id == itemId, cancellationToken);
     }
 
@@ -74,7 +74,7 @@ public sealed class UserLibraryRepository : IUserLibraryRepository
             return new PagedResult<UserLibraryItem>([], query.PageNumber, query.PageSize, totalCount);
         }
 
-        var items = await ReadItemGraph(tracking: false, includeProgressEntries: false)
+        var items = await ReadItemGraph(tracking: false, includeProgressEntries: false, includeDetails: false)
             .Where(item => itemIds.Contains(item.Id))
             .ToListAsync(cancellationToken);
 
@@ -99,7 +99,7 @@ public sealed class UserLibraryRepository : IUserLibraryRepository
         _dbContext.UserLibraryItems.Remove(item);
     }
 
-    private IQueryable<UserLibraryItem> ReadItemGraph(bool tracking, bool includeProgressEntries)
+    private IQueryable<UserLibraryItem> ReadItemGraph(bool tracking, bool includeProgressEntries, bool includeDetails)
     {
         var query = tracking
             ? _dbContext.UserLibraryItems.AsQueryable()
@@ -118,6 +118,15 @@ public sealed class UserLibraryRepository : IUserLibraryRepository
         if (includeProgressEntries)
         {
             query = query.Include(item => item.ReadingProgressEntries);
+        }
+
+        if (includeDetails)
+        {
+            query = query
+                .Include(item => item.UserLibraryItemTags)
+                    .ThenInclude(link => link.Tag)
+                .Include(item => item.Review)
+                .Include(item => item.Loans);
         }
 
         return query;
@@ -168,6 +177,11 @@ public sealed class UserLibraryRepository : IUserLibraryRepository
             var authorPattern = $"%{filters.Author.Trim()}%";
             query = query.Where(item =>
                 item.BookEdition!.BookEditionAuthors.Any(link => EF.Functions.ILike(link.Author!.Name, authorPattern)));
+        }
+
+        if (filters.TagId.HasValue)
+        {
+            query = query.Where(item => item.UserLibraryItemTags.Any(link => link.TagId == filters.TagId.Value));
         }
 
         if (!string.IsNullOrWhiteSpace(filters.Search))

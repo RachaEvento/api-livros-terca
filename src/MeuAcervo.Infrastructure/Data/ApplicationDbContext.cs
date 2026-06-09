@@ -45,6 +45,20 @@ public sealed class ApplicationDbContext : DbContext, IApplicationDbContext
 
     public DbSet<ReadingProgressEntry> ReadingProgressEntries => Set<ReadingProgressEntry>();
 
+    public DbSet<Tag> Tags => Set<Tag>();
+
+    public DbSet<UserLibraryItemTag> UserLibraryItemTags => Set<UserLibraryItemTag>();
+
+    public DbSet<Review> Reviews => Set<Review>();
+
+    public DbSet<Loan> Loans => Set<Loan>();
+
+    public DbSet<CustomFieldDefinition> CustomFieldDefinitions => Set<CustomFieldDefinition>();
+
+    public DbSet<CustomFieldOption> CustomFieldOptions => Set<CustomFieldOption>();
+
+    public DbSet<CustomFieldValue> CustomFieldValues => Set<CustomFieldValue>();
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.ApplyConfigurationsFromAssembly(typeof(AssemblyMarker).Assembly);

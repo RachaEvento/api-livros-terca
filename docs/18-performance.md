@@ -36,10 +36,11 @@ Garantir boa experiência mesmo com acervos grandes, múltiplos filtros e integr
 
 - `TenantId, Status`
 - `TenantId, DueAtUtc`
+- `TenantId, UserLibraryItemId, Status` para emprestimo ativo por item
 
 ### `CustomFieldDefinition`
 
-- `TenantId, EntityType, Key`
+- `TenantId, EntityType, NormalizedKey`
 
 ### `CustomFieldValue`
 

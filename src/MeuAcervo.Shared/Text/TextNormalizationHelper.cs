@@ -62,6 +62,18 @@ public static partial class TextNormalizationHelper
         return NonIsbnCharacterRegex().Replace(value.Trim(), string.Empty).ToUpperInvariant();
     }
 
+    public static string Slugify(string? value)
+    {
+        var normalized = NormalizeText(value).ToLowerInvariant();
+        if (string.IsNullOrWhiteSpace(normalized))
+        {
+            return string.Empty;
+        }
+
+        var slug = SlugSeparatorRegex().Replace(normalized, "-");
+        return SlugBoundaryRegex().Replace(slug, string.Empty);
+    }
+
     public static DateTime? CreatePublishedAtUtc(int? year)
     {
         if (!year.HasValue || year.Value < 1 || year.Value > 9999)
@@ -90,4 +102,10 @@ public static partial class TextNormalizationHelper
 
     [GeneratedRegex(@"[^0-9Xx]", RegexOptions.Compiled)]
     private static partial Regex NonIsbnCharacterRegex();
+
+    [GeneratedRegex(@"[^a-z0-9]+", RegexOptions.Compiled)]
+    private static partial Regex SlugSeparatorRegex();
+
+    [GeneratedRegex(@"^-+|-+$", RegexOptions.Compiled)]
+    private static partial Regex SlugBoundaryRegex();
 }

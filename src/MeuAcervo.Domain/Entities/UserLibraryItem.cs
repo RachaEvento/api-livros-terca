@@ -42,4 +42,10 @@ public sealed class UserLibraryItem : TenantScopedSoftDeletableAuditableEntityBa
     public BookEdition? BookEdition { get; set; }
 
     public ICollection<ReadingProgressEntry> ReadingProgressEntries { get; set; } = new List<ReadingProgressEntry>();
+
+    public ICollection<UserLibraryItemTag> UserLibraryItemTags { get; set; } = new List<UserLibraryItemTag>();
+
+    public ICollection<Loan> Loans { get; set; } = new List<Loan>();
+
+    public Review? Review { get; set; }
 }

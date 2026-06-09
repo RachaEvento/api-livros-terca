@@ -6,6 +6,7 @@ public sealed record UserLibraryItemListQuery(
     string? Search,
     string? Title,
     string? Author,
+    Guid? TagId,
     ShelfType? ShelfType,
     ReadingStatus? ReadingStatus,
     bool? IsFavorite,
