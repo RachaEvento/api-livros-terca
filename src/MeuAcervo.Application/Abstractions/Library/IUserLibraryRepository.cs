@@ -12,6 +12,12 @@ public interface IUserLibraryRepository
 
     Task<bool> ActiveItemExistsAsync(Guid tenantId, Guid userId, Guid bookEditionId, Guid? excludingItemId, CancellationToken cancellationToken = default);
 
+    Task<IReadOnlyCollection<ExistingUserLibraryItemMatch>> GetActiveItemsByEditionIdsAsync(
+        Guid tenantId,
+        Guid userId,
+        IReadOnlyCollection<Guid> bookEditionIds,
+        CancellationToken cancellationToken = default);
+
     Task<UserLibraryItem?> GetTrackedItemAsync(Guid tenantId, Guid userId, Guid itemId, CancellationToken cancellationToken = default);
 
     Task<UserLibraryItem?> GetReadonlyItemAsync(Guid tenantId, Guid userId, Guid itemId, bool includeProgressEntries, CancellationToken cancellationToken = default);

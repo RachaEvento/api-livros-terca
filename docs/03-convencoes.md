@@ -86,7 +86,7 @@ Ao finalizar:
 
 - Nunca confiar em `TenantId` vindo do body quando o dado pertence ao usuário autenticado.
 - Claims do JWT são a fonte primária para contexto do tenant.
-- Refresh token deve ser persistido com hash.
+- Access token deve expirar em janela curta e ser tratado com cuidado pelo cliente.
 - Segredos só via variáveis de ambiente ou secret store.
 
 ## Convenções de documentação

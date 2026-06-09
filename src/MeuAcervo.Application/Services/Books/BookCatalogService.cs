@@ -1,10 +1,13 @@
 using AutoMapper;
 using FluentValidation;
 using MeuAcervo.Application.Abstractions.Books;
+using MeuAcervo.Application.Abstractions.CurrentUser;
 using MeuAcervo.Application.Abstractions.Infrastructure;
+using MeuAcervo.Application.Abstractions.Library;
 using MeuAcervo.Application.Common.Exceptions;
 using MeuAcervo.Application.DTOs.Books;
 using MeuAcervo.Application.DTOs.Catalog;
+using MeuAcervo.Application.Models.Library;
 using MeuAcervo.Application.Models.Books;
 using MeuAcervo.Domain.Entities;
 using MeuAcervo.Domain.Enums;
@@ -18,23 +21,32 @@ public sealed class BookCatalogService : IBookCatalogService
     private readonly IValidator<BookSearchRequest> _bookSearchRequestValidator;
     private readonly IValidator<BookImportRequest> _bookImportRequestValidator;
     private readonly IBookSearchOrchestrator _bookSearchOrchestrator;
+    private readonly IBookEditionMatcher _bookEditionMatcher;
     private readonly IBookCatalogRepository _bookCatalogRepository;
+    private readonly IUserLibraryRepository _userLibraryRepository;
     private readonly IApplicationDbContext _applicationDbContext;
+    private readonly ICurrentUserContext _currentUserContext;
     private readonly IMapper _mapper;
 
     public BookCatalogService(
         IValidator<BookSearchRequest> bookSearchRequestValidator,
         IValidator<BookImportRequest> bookImportRequestValidator,
         IBookSearchOrchestrator bookSearchOrchestrator,
+        IBookEditionMatcher bookEditionMatcher,
         IBookCatalogRepository bookCatalogRepository,
+        IUserLibraryRepository userLibraryRepository,
         IApplicationDbContext applicationDbContext,
+        ICurrentUserContext currentUserContext,
         IMapper mapper)
     {
         _bookSearchRequestValidator = bookSearchRequestValidator;
         _bookImportRequestValidator = bookImportRequestValidator;
         _bookSearchOrchestrator = bookSearchOrchestrator;
+        _bookEditionMatcher = bookEditionMatcher;
         _bookCatalogRepository = bookCatalogRepository;
+        _userLibraryRepository = userLibraryRepository;
         _applicationDbContext = applicationDbContext;
+        _currentUserContext = currentUserContext;
         _mapper = mapper;
     }
 
@@ -52,8 +64,31 @@ public sealed class BookCatalogService : IBookCatalogService
             request.PageSize);
 
         var searchResult = await _bookSearchOrchestrator.SearchAsync(query, cancellationToken);
+        var currentUserId = _currentUserContext.UserId
+                            ?? throw new UnauthorizedException("The authenticated user identifier is missing from the JWT.");
+        var currentTenantId = _currentUserContext.TenantId
+                              ?? throw new UnauthorizedException("The authenticated tenant identifier is missing from the JWT.");
+
+        var bookRequests = searchResult.Items
+            .Select(MapSearchResultToImportRequest)
+            .ToArray();
+
+        var matchedEditions = await _bookEditionMatcher.FindMatchingEditionsAsync(bookRequests, cancellationToken);
+        var matchedEditionIds = matchedEditions
+            .Where(edition => edition is not null)
+            .Select(edition => edition!.Id)
+            .Distinct()
+            .ToArray();
+
+        var existingLibraryItems = await _userLibraryRepository.GetActiveItemsByEditionIdsAsync(
+            currentTenantId,
+            currentUserId,
+            matchedEditionIds,
+            cancellationToken);
+
+        var existingLibraryItemsByEditionId = existingLibraryItems.ToDictionary(item => item.BookEditionId);
         var responseItems = searchResult.Items
-            .Select(MapSearchResult)
+            .Select((result, index) => MapSearchResult(result, matchedEditions[index], existingLibraryItemsByEditionId))
             .ToArray();
 
         return new PagedResult<BookSearchResultResponse>(
@@ -87,16 +122,7 @@ public sealed class BookCatalogService : IBookCatalogService
             .Where(value => !string.IsNullOrWhiteSpace(value))
             .ToArray();
 
-        var edition = await ResolveEditionAsync(
-            normalizedSource,
-            normalizedEditionId,
-            normalizedIsbn13,
-            normalizedIsbn10,
-            normalizedTitle,
-            normalizedLanguage,
-            normalizedPublisher,
-            normalizedAuthorNames,
-            cancellationToken);
+        var edition = await _bookEditionMatcher.FindMatchingEditionAsync(request, cancellationToken);
 
         var work = edition?.BookWork;
         var workFromReference = normalizedWorkExternalId is null
@@ -184,46 +210,11 @@ public sealed class BookCatalogService : IBookCatalogService
             _mapper.Map<IReadOnlyCollection<ExternalBookReferenceSummaryResponse>>(externalReferences));
     }
 
-    private async Task<BookEdition?> ResolveEditionAsync(
-        string provider,
-        string? externalId,
-        string? isbn13,
-        string? isbn10,
-        string normalizedTitle,
-        string? normalizedLanguage,
-        string normalizedPublisher,
-        IReadOnlyCollection<string> normalizedAuthorNames,
-        CancellationToken cancellationToken)
+    public async Task<Guid?> ResolveExistingEditionIdAsync(BookImportRequest request, CancellationToken cancellationToken = default)
     {
-        if (externalId is not null)
-        {
-            var byExternalReference = await _bookCatalogRepository.GetEditionByExternalReferenceAsync(provider, externalId, cancellationToken);
-            if (byExternalReference is not null)
-            {
-                return byExternalReference;
-            }
-        }
+        await _bookImportRequestValidator.ValidateAndThrowAsync(request, cancellationToken);
 
-        if (isbn13 is not null)
-        {
-            var byIsbn13 = await _bookCatalogRepository.GetEditionByIsbn13Async(isbn13, cancellationToken);
-            if (byIsbn13 is not null)
-            {
-                return byIsbn13;
-            }
-        }
-
-        if (isbn10 is not null)
-        {
-            var byIsbn10 = await _bookCatalogRepository.GetEditionByIsbn10Async(isbn10, cancellationToken);
-            if (byIsbn10 is not null)
-            {
-                return byIsbn10;
-            }
-        }
-
-        var candidates = await _bookCatalogRepository.FindEditionsByNormalizedTitleAsync(normalizedTitle, normalizedLanguage, cancellationToken);
-        return SelectBestEditionCandidate(candidates, normalizedPublisher, normalizedAuthorNames);
+        return (await _bookEditionMatcher.FindMatchingEditionAsync(request, cancellationToken))?.Id;
     }
 
     private async Task<Publisher?> ResolvePublisherAsync(string? publisherName, string normalizedPublisher, CancellationToken cancellationToken)
@@ -355,54 +346,6 @@ public sealed class BookCatalogService : IBookCatalogService
         }
     }
 
-    private static BookEdition? SelectBestEditionCandidate(
-        IEnumerable<BookEdition> candidates,
-        string normalizedPublisher,
-        IReadOnlyCollection<string> normalizedAuthorNames)
-    {
-        return candidates
-            .Select(candidate => new
-            {
-                Candidate = candidate,
-                Score = ScoreEditionCandidate(candidate, normalizedPublisher, normalizedAuthorNames)
-            })
-            .Where(item => item.Score > 0)
-            .OrderByDescending(item => item.Score)
-            .ThenByDescending(item => item.Candidate.UpdatedAtUtc)
-            .Select(item => item.Candidate)
-            .FirstOrDefault();
-    }
-
-    private static int ScoreEditionCandidate(
-        BookEdition candidate,
-        string normalizedPublisher,
-        IReadOnlyCollection<string> normalizedAuthorNames)
-    {
-        var score = 1;
-
-        if (!string.IsNullOrWhiteSpace(normalizedPublisher)
-            && string.Equals(candidate.Publisher?.NormalizedName, normalizedPublisher, StringComparison.OrdinalIgnoreCase))
-        {
-            score += 5;
-        }
-
-        if (normalizedAuthorNames.Count == 0)
-        {
-            return score;
-        }
-
-        var candidateAuthorNames = candidate.BookEditionAuthors
-            .Select(link => link.Author?.NormalizedName)
-            .Where(name => !string.IsNullOrWhiteSpace(name))
-            .Cast<string>()
-            .ToHashSet(StringComparer.OrdinalIgnoreCase);
-
-        var authorMatches = normalizedAuthorNames.Count(candidateAuthorNames.Contains);
-        score += authorMatches * 3;
-
-        return authorMatches > 0 ? score : 0;
-    }
-
     private static void EnrichWork(BookWork work, BookImportRequest request, string normalizedWorkTitle, string? normalizedLanguage)
     {
         if (string.IsNullOrWhiteSpace(work.CanonicalTitle))
@@ -447,8 +390,17 @@ public sealed class BookCatalogService : IBookCatalogService
         edition.CoverImageUrl ??= request.CoverImageUrl?.Trim();
     }
 
-    private static BookSearchResultResponse MapSearchResult(ExternalBookSearchResult result)
+    private static BookSearchResultResponse MapSearchResult(
+        ExternalBookSearchResult result,
+        BookEdition? matchedEdition,
+        IReadOnlyDictionary<Guid, ExistingUserLibraryItemMatch> existingLibraryItemsByEditionId)
     {
+        ExistingUserLibraryItemMatch? existingLibraryItem = null;
+        if (matchedEdition is not null)
+        {
+            existingLibraryItemsByEditionId.TryGetValue(matchedEdition.Id, out existingLibraryItem);
+        }
+
         return new BookSearchResultResponse(
             result.Source,
             result.ExternalId,
@@ -466,7 +418,31 @@ public sealed class BookCatalogService : IBookCatalogService
             result.PageCount,
             result.CoverImageUrl,
             result.ExternalUrl,
-            result.ConfidenceScore);
+            result.ConfidenceScore,
+            existingLibraryItem?.LibraryItemId,
+            existingLibraryItem?.ShelfType);
+    }
+
+    private static BookImportRequest MapSearchResultToImportRequest(ExternalBookSearchResult result)
+    {
+        return new BookImportRequest(
+            result.Source,
+            result.ExternalId,
+            result.WorkExternalId,
+            result.Title,
+            result.WorkTitle,
+            result.Subtitle,
+            result.Authors,
+            result.Isbn10,
+            result.Isbn13,
+            result.Publisher,
+            result.PublishedYear,
+            result.FirstPublishedYear,
+            result.Language,
+            result.PageCount,
+            result.CoverImageUrl,
+            result.ExternalUrl,
+            result.Description);
     }
 
     private static string? NormalizeIsbnOrNull(string? value)

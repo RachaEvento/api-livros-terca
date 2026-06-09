@@ -6,7 +6,6 @@ using MeuAcervo.Application.Common.Exceptions;
 using MeuAcervo.Application.DTOs.Loans;
 using MeuAcervo.Domain.Entities;
 using MeuAcervo.Domain.Enums;
-using MeuAcervo.Shared.Pagination;
 
 namespace MeuAcervo.Application.Services.Loans;
 
@@ -15,7 +14,6 @@ public sealed class LoanService : ILoanService
     private readonly ILoanRepository _loanRepository;
     private readonly IUserLibraryRepository _userLibraryRepository;
     private readonly IApplicationDbContext _applicationDbContext;
-    private readonly IValidator<GetLoansRequest> _getLoansRequestValidator;
     private readonly IValidator<CreateLoanRequest> _createLoanRequestValidator;
     private readonly IValidator<ReturnLoanRequest> _returnLoanRequestValidator;
 
@@ -23,40 +21,14 @@ public sealed class LoanService : ILoanService
         ILoanRepository loanRepository,
         IUserLibraryRepository userLibraryRepository,
         IApplicationDbContext applicationDbContext,
-        IValidator<GetLoansRequest> getLoansRequestValidator,
         IValidator<CreateLoanRequest> createLoanRequestValidator,
         IValidator<ReturnLoanRequest> returnLoanRequestValidator)
     {
         _loanRepository = loanRepository;
         _userLibraryRepository = userLibraryRepository;
         _applicationDbContext = applicationDbContext;
-        _getLoansRequestValidator = getLoansRequestValidator;
         _createLoanRequestValidator = createLoanRequestValidator;
         _returnLoanRequestValidator = returnLoanRequestValidator;
-    }
-
-    public async Task<PagedResult<LoanResponse>> GetLoansAsync(Guid tenantId, Guid userId, GetLoansRequest request, CancellationToken cancellationToken = default)
-    {
-        await _getLoansRequestValidator.ValidateAndThrowAsync(request, cancellationToken);
-
-        var pagedLoans = await _loanRepository.SearchAsync(
-            tenantId,
-            userId,
-            request.Search?.Trim(),
-            request.Status,
-            request.OnlyActive,
-            request.PageNumber,
-            request.PageSize,
-            cancellationToken);
-
-        var responseItems = pagedLoans.Items.Select(MapResponse).ToArray();
-        return new PagedResult<LoanResponse>(responseItems, pagedLoans.PageNumber, pagedLoans.PageSize, pagedLoans.TotalCount);
-    }
-
-    public async Task<LoanResponse> GetByIdAsync(Guid tenantId, Guid userId, Guid loanId, CancellationToken cancellationToken = default)
-    {
-        var loan = await GetOwnedLoanAsync(tenantId, userId, loanId, tracking: false, cancellationToken);
-        return MapResponse(loan);
     }
 
     public async Task<LoanResponse> CreateAsync(Guid tenantId, Guid userId, Guid libraryItemId, CreateLoanRequest request, CancellationToken cancellationToken = default)
@@ -104,14 +76,14 @@ public sealed class LoanService : ILoanService
 
         _loanRepository.Add(loan);
         await _applicationDbContext.SaveChangesAsync(cancellationToken);
-        return await GetByIdAsync(tenantId, userId, loan.Id, cancellationToken);
+        return await GetResponseAsync(tenantId, userId, libraryItemId, loan.Id, cancellationToken);
     }
 
-    public async Task<LoanResponse> ReturnAsync(Guid tenantId, Guid userId, Guid loanId, ReturnLoanRequest request, CancellationToken cancellationToken = default)
+    public async Task<LoanResponse> ReturnAsync(Guid tenantId, Guid userId, Guid libraryItemId, Guid loanId, ReturnLoanRequest request, CancellationToken cancellationToken = default)
     {
         await _returnLoanRequestValidator.ValidateAndThrowAsync(request, cancellationToken);
 
-        var loan = await GetOwnedLoanAsync(tenantId, userId, loanId, tracking: true, cancellationToken);
+        var loan = await GetOwnedLoanAsync(tenantId, userId, libraryItemId, loanId, tracking: true, cancellationToken);
         if (loan.ReturnedAtUtc.HasValue || loan.Status == LoanStatus.Returned)
         {
             throw new BusinessRuleException("The informed loan has already been returned.");
@@ -127,15 +99,32 @@ public sealed class LoanService : ILoanService
         loan.Status = LoanStatus.Returned;
 
         await _applicationDbContext.SaveChangesAsync(cancellationToken);
-        return await GetByIdAsync(tenantId, userId, loan.Id, cancellationToken);
+        return await GetResponseAsync(tenantId, userId, libraryItemId, loan.Id, cancellationToken);
     }
 
-    private async Task<Loan> GetOwnedLoanAsync(Guid tenantId, Guid userId, Guid loanId, bool tracking, CancellationToken cancellationToken)
+    private async Task<LoanResponse> GetResponseAsync(
+        Guid tenantId,
+        Guid userId,
+        Guid libraryItemId,
+        Guid loanId,
+        CancellationToken cancellationToken)
+    {
+        var loan = await GetOwnedLoanAsync(tenantId, userId, libraryItemId, loanId, tracking: false, cancellationToken);
+        return MapResponse(loan);
+    }
+
+    private async Task<Loan> GetOwnedLoanAsync(
+        Guid tenantId,
+        Guid userId,
+        Guid libraryItemId,
+        Guid loanId,
+        bool tracking,
+        CancellationToken cancellationToken)
     {
         var loan = await _loanRepository.GetByIdAsync(tenantId, loanId, tracking, cancellationToken)
                    ?? throw new NotFoundException("Loan was not found for the authenticated tenant.");
 
-        if (loan.UserLibraryItem?.UserId != userId)
+        if (loan.UserLibraryItem?.UserId != userId || loan.UserLibraryItemId != libraryItemId)
         {
             throw new NotFoundException("Loan was not found for the authenticated user.");
         }

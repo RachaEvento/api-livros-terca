@@ -1,3 +1,6 @@
+using System.Text.Json.Serialization;
+using MeuAcervo.Domain.Enums;
+
 namespace MeuAcervo.Application.DTOs.Books;
 
 public sealed record BookSearchResultResponse(
@@ -17,4 +20,6 @@ public sealed record BookSearchResultResponse(
     int? PageCount,
     string? CoverImageUrl,
     string? ExternalUrl,
-    decimal ConfidenceScore);
+    decimal ConfidenceScore,
+    [property: JsonIgnore(Condition = JsonIgnoreCondition.Never)] Guid? ExistingLibraryItemId,
+    [property: JsonIgnore(Condition = JsonIgnoreCondition.Never)] ShelfType? ExistingShelfType);

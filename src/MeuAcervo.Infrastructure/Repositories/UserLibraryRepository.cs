@@ -32,7 +32,7 @@ public sealed class UserLibraryRepository : IUserLibraryRepository
     public Task<bool> ActiveItemExistsAsync(Guid tenantId, Guid userId, Guid bookEditionId, Guid? excludingItemId, CancellationToken cancellationToken = default)
     {
         var query = _dbContext.UserLibraryItems
-            .Where(item => item.TenantId == tenantId && item.UserId == userId && item.BookEditionId == bookEditionId);
+            .Where(item => item.TenantId == tenantId && item.UserId == userId && item.BookEditionId == bookEditionId && !item.IsDeleted);
 
         if (excludingItemId.HasValue)
         {
@@ -40,6 +40,24 @@ public sealed class UserLibraryRepository : IUserLibraryRepository
         }
 
         return query.AnyAsync(cancellationToken);
+    }
+
+    public async Task<IReadOnlyCollection<ExistingUserLibraryItemMatch>> GetActiveItemsByEditionIdsAsync(
+        Guid tenantId,
+        Guid userId,
+        IReadOnlyCollection<Guid> bookEditionIds,
+        CancellationToken cancellationToken = default)
+    {
+        if (bookEditionIds.Count == 0)
+        {
+            return Array.Empty<ExistingUserLibraryItemMatch>();
+        }
+
+        return await _dbContext.UserLibraryItems
+            .AsNoTracking()
+            .Where(item => item.TenantId == tenantId && item.UserId == userId && !item.IsDeleted && bookEditionIds.Contains(item.BookEditionId))
+            .Select(item => new ExistingUserLibraryItemMatch(item.BookEditionId, item.Id, item.ShelfType))
+            .ToArrayAsync(cancellationToken);
     }
 
     public Task<UserLibraryItem?> GetTrackedItemAsync(Guid tenantId, Guid userId, Guid itemId, CancellationToken cancellationToken = default)
@@ -57,7 +75,7 @@ public sealed class UserLibraryRepository : IUserLibraryRepository
     public async Task<PagedResult<UserLibraryItem>> SearchAsync(Guid tenantId, Guid userId, UserLibraryItemListQuery query, CancellationToken cancellationToken = default)
     {
         var itemIdsQuery = _dbContext.UserLibraryItems
-            .Where(item => item.TenantId == tenantId && item.UserId == userId);
+            .Where(item => item.TenantId == tenantId && item.UserId == userId && !item.IsDeleted);
 
         itemIdsQuery = ApplyFilters(itemIdsQuery, query);
         itemIdsQuery = ApplySorting(itemIdsQuery, query);
@@ -123,8 +141,6 @@ public sealed class UserLibraryRepository : IUserLibraryRepository
         if (includeDetails)
         {
             query = query
-                .Include(item => item.UserLibraryItemTags)
-                    .ThenInclude(link => link.Tag)
                 .Include(item => item.Review)
                 .Include(item => item.Loans);
         }
@@ -177,11 +193,6 @@ public sealed class UserLibraryRepository : IUserLibraryRepository
             var authorPattern = $"%{filters.Author.Trim()}%";
             query = query.Where(item =>
                 item.BookEdition!.BookEditionAuthors.Any(link => EF.Functions.ILike(link.Author!.Name, authorPattern)));
-        }
-
-        if (filters.TagId.HasValue)
-        {
-            query = query.Where(item => item.UserLibraryItemTags.Any(link => link.TagId == filters.TagId.Value));
         }
 
         if (!string.IsNullOrWhiteSpace(filters.Search))

@@ -7,5 +7,7 @@ public interface IBookCatalogService
 {
     Task<PagedResult<BookSearchResultResponse>> SearchAsync(BookSearchRequest request, CancellationToken cancellationToken = default);
 
+    Task<Guid?> ResolveExistingEditionIdAsync(BookImportRequest request, CancellationToken cancellationToken = default);
+
     Task<BookImportResponse> ImportAsync(BookImportRequest request, CancellationToken cancellationToken = default);
 }

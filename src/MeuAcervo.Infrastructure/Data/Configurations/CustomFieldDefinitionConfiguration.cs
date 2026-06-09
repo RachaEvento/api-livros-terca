@@ -17,14 +17,6 @@ public sealed class CustomFieldDefinitionConfiguration : IEntityTypeConfiguratio
             .HasMaxLength(64)
             .IsRequired();
 
-        builder.Property(entity => entity.Key)
-            .HasMaxLength(100)
-            .IsRequired();
-
-        builder.Property(entity => entity.NormalizedKey)
-            .HasMaxLength(100)
-            .IsRequired();
-
         builder.Property(entity => entity.Label)
             .HasMaxLength(150)
             .IsRequired();
@@ -34,11 +26,6 @@ public sealed class CustomFieldDefinitionConfiguration : IEntityTypeConfiguratio
             .HasMaxLength(32)
             .IsRequired();
 
-        builder.Property(entity => entity.ConfigurationJson)
-            .HasMaxLength(4000);
-
-        builder.HasIndex(entity => new { entity.TenantId, entity.EntityType, entity.NormalizedKey })
-            .IsUnique()
-            .HasFilter("\"IsDeleted\" = FALSE");
+        builder.HasIndex(entity => new { entity.TenantId, entity.EntityType, entity.SortOrder });
     }
 }

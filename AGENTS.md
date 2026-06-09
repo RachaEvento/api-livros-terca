@@ -154,7 +154,7 @@ Uma tarefa só está concluída quando:
 
 Os arquivos em `docs/` funcionam como a especificação de referência para implementar:
 
-- autenticação JWT com refresh token
+- autenticacao JWT simples
 - multi-tenancy seguro
 - catálogo bibliográfico normalizado
 - acervo pessoal com status, progresso e favoritos

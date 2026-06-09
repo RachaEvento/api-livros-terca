@@ -8,16 +8,9 @@ public sealed class CreateCustomFieldDefinitionRequestValidator : AbstractValida
 {
     public CreateCustomFieldDefinitionRequestValidator()
     {
-        RuleFor(request => request.Key)
-            .NotEmpty()
-            .MaximumLength(100);
-
         RuleFor(request => request.Label)
             .NotEmpty()
             .MaximumLength(150);
-
-        RuleFor(request => request.ConfigurationJson)
-            .MaximumLength(4000);
 
         RuleForEach(request => request.Options)
             .SetValidator(new CustomFieldOptionRequestValidator());

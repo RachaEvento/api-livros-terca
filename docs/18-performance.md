@@ -2,35 +2,41 @@
 
 ## Objetivo
 
-Garantir boa experiência mesmo com acervos grandes, múltiplos filtros e integrações externas.
+Garantir boa experiencia mesmo com acervos grandes, multiplos filtros, consultas publicas e integracoes externas.
 
 ## Diretrizes principais
 
-- paginação obrigatória em listagens
-- filtros indexáveis
+- paginacao obrigatoria em listagens
+- filtros indexaveis
 - consultas tenant-scoped eficientes
-- deduplicação de busca externa com custo controlado
+- projecoes com `Select` para endpoints publicos
+- deduplicacao de busca externa com custo controlado
 - evitar `Include` excessivo
+- preferir `AsNoTracking` em consultas de leitura
 
-## Índices recomendados
+## Indices recomendados
 
 ### `UserLibraryItem`
 
 - `TenantId, UserId, ShelfType`
 - `TenantId, UserId, ReadingStatus`
-- `TenantId, IsFavorite`
+- `TenantId, UserId, IsFavorite`
 - `TenantId, UserId, BookEditionId` unico parcial para itens ativos
+- `TenantId, UserId, StartedAt`
+- `TenantId, UserId, FinishedAt`
 - `BookEditionId`
 - `UpdatedAtUtc`
 
-### `Tag`
+### `UserProfile`
 
-- `TenantId, Slug`
+- `UserId` unico
+- `TenantId, IsPublicProfileEnabled`
 
 ### `Review`
 
 - `TenantId, UserId`
 - `TenantId, Visibility`
+- `TenantId, UserId, Visibility, PublishedAtUtc`
 
 ### `Loan`
 
@@ -40,11 +46,12 @@ Garantir boa experiência mesmo com acervos grandes, múltiplos filtros e integr
 
 ### `CustomFieldDefinition`
 
-- `TenantId, EntityType, NormalizedKey`
+- `TenantId, EntityType, SortOrder`
 
 ### `CustomFieldValue`
 
 - `TenantId, EntityType, EntityId`
+- `TenantId, EntityType, EntityId, CustomFieldDefinitionId`
 
 ### `BookEdition`
 
@@ -73,29 +80,40 @@ Garantir boa experiência mesmo com acervos grandes, múltiplos filtros e integr
 - `BookWorkId`
 - `BookEditionId`
 
-## Estratégias recomendadas
+## Estrategias recomendadas
 
-- projeções com `Select` para DTOs
-- paginação por offset na v1
+- projecoes para DTOs publicos em vez de carregar o grafo inteiro do acervo
+- paginacao por offset na v1
 - considerar keyset pagination no futuro para feeds e atividades
 - cache de buscas externas
-- cache leve para permissões e metadados estáveis
+- cache leve para permissoes e metadados estaveis
+- consultas publicas em duas etapas quando houver custom fields publicos: primeiro ids paginados, depois enriquecimento controlado
 
 ## Busca externa
 
 - executar providers em paralelo
 - aplicar timeout
-- evitar persistência desnecessária de resultados transitórios
+- evitar persistencia desnecessaria de resultados transitorios
 
 ## Postgres
 
 Usar:
 
-- índices compostos
+- indices compostos
 - constraints de unicidade
 - `jsonb` somente onde agregar valor real
-- paginação com cuidado para evitar custo excessivo em offsets muito altos
-- índices parciais para ISBN quando os valores forem opcionais
+- paginacao com cuidado para evitar custo excessivo em offsets muito altos
+- indices parciais para ISBN quando os valores forem opcionais
+
+## Consultas publicas
+
+As consultas de perfil publico devem:
+
+- resolver o usuario por `NormalizedUsername`
+- validar a flag do perfil antes de executar consultas agregadas mais caras
+- nunca reutilizar endpoints internos do acervo
+- nunca materializar `PrivateNotes`, reviews privadas ou custom fields nao publicos
+- paginar a biblioteca publica em duas etapas quando houver enriquecimento com custom fields ou review publica resumida
 
 ## Observabilidade
 
@@ -105,3 +123,4 @@ Monitorar no futuro:
 - tempo por provider externo
 - queries lentas
 - volume de itens por tenant
+- custo das consultas publicas por username

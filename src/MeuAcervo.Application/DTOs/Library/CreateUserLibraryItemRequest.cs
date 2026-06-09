@@ -1,9 +1,11 @@
+using MeuAcervo.Application.DTOs.Books;
 using MeuAcervo.Domain.Enums;
 
 namespace MeuAcervo.Application.DTOs.Library;
 
 public sealed record CreateUserLibraryItemRequest(
-    Guid BookEditionId,
+    Guid? BookEditionId,
+    BookImportRequest? Book,
     ShelfType ShelfType,
     ReadingStatus? ReadingStatus,
     AcquisitionFormat? AcquisitionFormat,

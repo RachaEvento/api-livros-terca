@@ -33,7 +33,7 @@ public sealed class AuthService : IAuthService
         _mapper = mapper;
     }
 
-    public async Task<AuthSessionResponse> RegisterAsync(RegisterRequest request, string? clientIpAddress, CancellationToken cancellationToken = default)
+    public async Task<AuthSessionResponse> RegisterAsync(RegisterRequest request, CancellationToken cancellationToken = default)
     {
         var normalizedEmail = Normalize(request.Email);
         var normalizedUsername = Normalize(request.Username);
@@ -68,6 +68,17 @@ public sealed class AuthService : IAuthService
             IsActive = true
         };
 
+        user.UserProfile = new UserProfile
+        {
+            TenantId = tenant.Id,
+            UserId = user.Id,
+            User = user,
+            IsPublicProfileEnabled = false,
+            IsWishlistPublic = false,
+            IsStatsPublic = true,
+            IsRecentActivityPublic = false
+        };
+
         user.PasswordHash = _passwordHasherService.HashPassword(user, request.Password);
 
         var ownerRole = new Role
@@ -96,31 +107,18 @@ public sealed class AuthService : IAuthService
         var permissionCodes = permissions.Select(permission => permission.Code).ToArray();
 
         var accessToken = _authTokenService.CreateAccessToken(user, roles);
-        var refreshTokenMaterial = _authTokenService.CreateRefreshToken();
-
-        var refreshToken = new RefreshToken
-        {
-            TenantId = tenant.Id,
-            UserId = user.Id,
-            TokenHash = refreshTokenMaterial.TokenHash,
-            JwtId = accessToken.JwtId,
-            ExpiresAtUtc = refreshTokenMaterial.ExpiresAtUtc,
-            CreatedByIp = clientIpAddress
-        };
 
         _identityRepository.AddTenant(tenant);
         _identityRepository.AddUser(user);
         _identityRepository.AddRole(ownerRole);
         _identityRepository.AddUserRole(userRole);
         _identityRepository.AddRolePermissions(rolePermissions);
-        _identityRepository.AddRefreshToken(refreshToken);
-
         await _applicationDbContext.SaveChangesAsync(cancellationToken);
 
-        return CreateAuthSessionResponse(user, tenant, roles, permissionCodes, accessToken, refreshTokenMaterial);
+        return CreateAuthSessionResponse(user, tenant, roles, permissionCodes, accessToken);
     }
 
-    public async Task<AuthSessionResponse> LoginAsync(LoginRequest request, string? clientIpAddress, CancellationToken cancellationToken = default)
+    public async Task<AuthSessionResponse> LoginAsync(LoginRequest request, CancellationToken cancellationToken = default)
     {
         var normalizedValue = Normalize(request.EmailOrUsername);
         var user = await _identityRepository.FindByEmailOrUsernameAsync(normalizedValue, cancellationToken);
@@ -139,99 +137,12 @@ public sealed class AuthService : IAuthService
         var permissionCodes = await _identityRepository.GetPermissionCodesAsync(user.Id, user.TenantId, cancellationToken);
 
         var accessToken = _authTokenService.CreateAccessToken(user, roles);
-        var refreshTokenMaterial = _authTokenService.CreateRefreshToken();
-
-        var refreshToken = new RefreshToken
-        {
-            TenantId = user.TenantId,
-            UserId = user.Id,
-            TokenHash = refreshTokenMaterial.TokenHash,
-            JwtId = accessToken.JwtId,
-            ExpiresAtUtc = refreshTokenMaterial.ExpiresAtUtc,
-            CreatedByIp = clientIpAddress
-        };
-
-        _identityRepository.AddRefreshToken(refreshToken);
-        await _applicationDbContext.SaveChangesAsync(cancellationToken);
-
-        return CreateAuthSessionResponse(user, user.Tenant!, roles, permissionCodes, accessToken, refreshTokenMaterial);
+        return CreateAuthSessionResponse(user, user.Tenant!, roles, permissionCodes, accessToken);
     }
 
-    public async Task<AuthSessionResponse> RefreshAsync(RefreshTokenRequest request, string? clientIpAddress, CancellationToken cancellationToken = default)
+    public Task<LogoutResponse> LogoutAsync(CancellationToken cancellationToken = default)
     {
-        var refreshTokenHash = _authTokenService.HashRefreshToken(request.RefreshToken);
-        var storedRefreshToken = await _identityRepository.GetRefreshTokenByHashAsync(refreshTokenHash, cancellationToken);
-
-        if (storedRefreshToken is null)
-        {
-            throw new UnauthorizedException("Invalid refresh token.");
-        }
-
-        if (storedRefreshToken.RevokedAtUtc.HasValue)
-        {
-            throw new UnauthorizedException("Refresh token has already been revoked.");
-        }
-
-        if (storedRefreshToken.ExpiresAtUtc <= DateTime.UtcNow)
-        {
-            throw new UnauthorizedException("Refresh token has expired.");
-        }
-
-        var user = storedRefreshToken.User;
-        if (user is null)
-        {
-            throw new UnauthorizedException("Refresh token is not associated with a valid user.");
-        }
-
-        if (!user.IsActive)
-        {
-            throw new ForbiddenException("The user account is inactive.");
-        }
-
-        var roles = await _identityRepository.GetRoleNamesAsync(user.Id, user.TenantId, cancellationToken);
-        var permissionCodes = await _identityRepository.GetPermissionCodesAsync(user.Id, user.TenantId, cancellationToken);
-
-        var accessToken = _authTokenService.CreateAccessToken(user, roles);
-        var newRefreshTokenMaterial = _authTokenService.CreateRefreshToken();
-
-        storedRefreshToken.RevokedAtUtc = DateTime.UtcNow;
-        storedRefreshToken.ReplacedByTokenHash = newRefreshTokenMaterial.TokenHash;
-
-        var replacementToken = new RefreshToken
-        {
-            TenantId = user.TenantId,
-            UserId = user.Id,
-            TokenHash = newRefreshTokenMaterial.TokenHash,
-            JwtId = accessToken.JwtId,
-            ExpiresAtUtc = newRefreshTokenMaterial.ExpiresAtUtc,
-            CreatedByIp = clientIpAddress
-        };
-
-        _identityRepository.AddRefreshToken(replacementToken);
-        await _applicationDbContext.SaveChangesAsync(cancellationToken);
-
-        return CreateAuthSessionResponse(user, user.Tenant!, roles, permissionCodes, accessToken, newRefreshTokenMaterial);
-    }
-
-    public async Task<LogoutResponse> LogoutAsync(Guid authenticatedUserId, Guid authenticatedTenantId, LogoutRequest request, CancellationToken cancellationToken = default)
-    {
-        var refreshTokenHash = _authTokenService.HashRefreshToken(request.RefreshToken);
-        var storedRefreshToken = await _identityRepository.GetRefreshTokenByHashAsync(refreshTokenHash, cancellationToken);
-
-        if (storedRefreshToken is null ||
-            storedRefreshToken.UserId != authenticatedUserId ||
-            storedRefreshToken.TenantId != authenticatedTenantId)
-        {
-            throw new NotFoundException("Refresh token not found for the authenticated session.");
-        }
-
-        if (!storedRefreshToken.RevokedAtUtc.HasValue)
-        {
-            storedRefreshToken.RevokedAtUtc = DateTime.UtcNow;
-            await _applicationDbContext.SaveChangesAsync(cancellationToken);
-        }
-
-        return new LogoutResponse(true, storedRefreshToken.RevokedAtUtc ?? DateTime.UtcNow);
+        return Task.FromResult(new LogoutResponse(true, DateTime.UtcNow));
     }
 
     public async Task<CurrentSessionResponse> GetCurrentSessionAsync(Guid authenticatedUserId, Guid authenticatedTenantId, CancellationToken cancellationToken = default)
@@ -259,14 +170,11 @@ public sealed class AuthService : IAuthService
         Tenant tenant,
         IReadOnlyCollection<string> roles,
         IReadOnlyCollection<string> permissionCodes,
-        AccessTokenResult accessToken,
-        RefreshTokenMaterial refreshTokenMaterial)
+        AccessTokenResult accessToken)
     {
         return new AuthSessionResponse(
             accessToken.Token,
-            refreshTokenMaterial.Token,
             accessToken.ExpiresAtUtc,
-            refreshTokenMaterial.ExpiresAtUtc,
             _mapper.Map<TenantSummaryResponse>(tenant),
             _mapper.Map<UserSummaryResponse>(user),
             roles,

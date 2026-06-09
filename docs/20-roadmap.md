@@ -2,9 +2,9 @@
 
 ## Objetivo
 
-Organizar a implementação em entregas incrementais, mantendo a disciplina de especificação antes do código.
+Organizar a implementacao em entregas incrementais, mantendo a disciplina de especificacao antes do codigo.
 
-## Fase 1 - Fundação
+## Fase 1 - Fundacao
 
 - estruturar solution e projetos
 - configurar API, Application, Domain e Infrastructure
@@ -12,68 +12,69 @@ Organizar a implementação em entregas incrementais, mantendo a disciplina de e
 - configurar EF Core
 - configurar Swagger
 - configurar middleware global
-- configurar autenticação JWT
+- configurar autenticacao JWT
 
 ## Fase 2 - Identidade e tenancy
 
-- registro de usuário
+- registro de usuario
 - login
-- refresh token
-- tenant pessoal automático
-- roles e permissões iniciais
+- renovacao server-side de sessao, se a simplicidade atual deixar de atender
+- tenant pessoal automatico
+- roles e permissoes iniciais
 
-## Fase 3 - Catálogo e providers
+## Fase 3 - Catalogo bibliografico interno
 
-- modelar `BookWork`, `BookEdition`, `Author` e referências externas
+- modelar `BookWork`, `BookEdition`, `Author` e referencias externas
+- preparar indices e deduplicacao estrutural por ISBN
+- separar catalogo global do acervo tenant-scoped
+
+## Fase 4 - Providers de livros
+
 - integrar Open Library
 - implementar busca unificada
-- importar edição para o catálogo interno
+- importar edicao para o catalogo interno
+- manter arquitetura pronta para novos providers
 
-## Fase 4 - Acervo do usuário
+## Fase 5 - Acervo do usuario
 
 - CRUD de `UserLibraryItem`
 - wishlist
 - status de leitura
 - progresso
 - favoritos
-- filtros, ordenação e paginação
+- filtros, ordenacao e paginacao
 
-## Fase 5 - Organização avançada
+## Fase 6 - Organizacao avancada
 
-- tags
 - custom fields
 - reviews
-- empréstimos
+- emprestimos
 
-## Fase 6 - Perfil público
+## Fase 7 - Perfil publico e acabamento operacional
 
-- username público
-- estatísticas
-- favoritos públicos
-- reviews públicas
-- atividade recente pública
-
-## Fase 7 - Robustez operacional
-
-- índices finais
-- melhoria de logs
-- otimizações de performance
-- cache de integrações externas
-- endurecimento de segurança
+- username publico
+- estatisticas
+- favoritos publicos
+- reviews publicas
+- atividade recente publica
+- indices finais
+- melhoria de documentacao operacional
+- revisao de deploy e configuracao
 
 ## Regras do roadmap
 
-- nenhuma fase começa sem revisar os documentos relevantes
-- mudanças de escopo exigem atualização da documentação
+- nenhuma fase comeca sem revisar os documentos relevantes
+- mudancas de escopo exigem atualizacao da documentacao
 - preferir entregas verticais pequenas e completas
 
 ## Backlog futuro
 
-- múltiplos providers de livros
+- biblioteca publica paginada
+- multiplos providers de livros
 - tenants compartilhados
 - seguidores
-- feed de atividade
-- notificações
-- recomendações
+- feed de atividade completo
+- notificacoes
+- recomendacoes
 - background jobs
 - mensageria e eventos

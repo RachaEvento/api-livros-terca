@@ -47,7 +47,7 @@ Responsável por:
 - repositórios
 - DbContext
 - providers externos
-- persistência de tokens
+- servicos tecnicos de emissao e validacao de JWT
 - implementação de serviços técnicos
 
 ## Estrutura sugerida
@@ -105,7 +105,6 @@ Os módulos lógicos da solução são:
 - Catálogo bibliográfico
 - Busca externa de livros
 - Acervo do usuário
-- Tags
 - Reviews e notas
 - Empréstimos
 - Perfil social público
@@ -177,7 +176,7 @@ A primeira entrega funcional da base deve incluir:
 ## Decisões arquiteturais assumidas
 
 - O catálogo bibliográfico pode ser compartilhado globalmente.
-- Dados de leitura, review, tags, empréstimos e customizações são tenant-scoped.
+- Dados de leitura, review, empréstimos e customizações são tenant-scoped.
 - Cada usuário começa com um tenant pessoal.
 - A arquitetura já considera expansão futura para tenants de grupo.
 

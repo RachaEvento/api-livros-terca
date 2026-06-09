@@ -27,12 +27,10 @@ Na v1, `List` representa selecao simples de uma opcao definida pelo tenant.
 O usuario podera:
 
 - criar campo customizado
-- definir rotulo e chave interna
+- definir rotulo
 - escolher tipo
-- marcar como obrigatorio ou opcional
 - definir visibilidade publica
 - ativar ou desativar
-- reordenar
 - manter opcoes para campos do tipo lista
 - atribuir valores customizados a itens do acervo
 
@@ -45,23 +43,23 @@ Campos sugeridos:
 - `Id`
 - `TenantId`
 - `EntityType`
-- `Key`
-- `NormalizedKey`
 - `Label`
 - `DataType`
-- `IsRequired`
 - `IsPublic`
 - `IsActive`
 - `SortOrder`
-- `ConfigurationJson`
 - `IsDeleted`
 - `DeletedAtUtc`
 - `CreatedAtUtc`
 - `UpdatedAtUtc`
 
+Observacao:
+
+- `SortOrder` e gerenciado internamente pelo backend e nao faz parte do contrato de entrada ou saida da API
+
 Restricoes:
 
-- unicidade de `TenantId + EntityType + NormalizedKey` para definicoes ativas
+- identificacao e referencia por `Id`
 
 ### CustomFieldOption
 
@@ -75,6 +73,10 @@ Campos sugeridos:
 - `SortOrder`
 - `CreatedAtUtc`
 - `UpdatedAtUtc`
+
+Observacao:
+
+- a ordem das opcoes e definida pela sequencia enviada no payload, mas o backend persiste essa ordem internamente sem expor `SortOrder` na API
 
 ### CustomFieldValue
 
@@ -105,7 +107,8 @@ Usar tabela de valores tipados, evitando um unico campo texto para tudo. Isso fa
 ## Regras de validacao
 
 - somente um tipo de valor pode estar preenchido por registro
-- campos obrigatorios devem existir em operacoes explicitas de atribuicao de custom fields
+- campos customizados sao sempre opcionais
+- a ausencia de valor para um campo nao invalida o item do acervo
 - campos inativos nao devem ser exigidos em novas escritas
 - valor de lista deve existir entre as opcoes da definicao
 - a definicao deve pertencer ao mesmo tenant do item do acervo
@@ -121,21 +124,24 @@ Os valores customizados devem usar contrato tipado, por exemplo:
 ```json
 [
   {
-    "fieldKey": "purchase-price",
+    "definitionId": "11111111-1111-1111-1111-111111111111",
     "numberValue": 59.90
   },
   {
-    "fieldKey": "gifted-by",
+    "definitionId": "22222222-2222-2222-2222-222222222222",
     "textValue": "Ana"
   },
   {
-    "fieldKey": "reading-origin",
+    "definitionId": "33333333-3333-3333-3333-333333333333",
     "optionValue": "gift"
   }
 ]
 ```
 
-O servico de aplicacao deve resolver `fieldKey` para `CustomFieldDefinition`.
+O servico de aplicacao deve validar `definitionId` e carregar a `CustomFieldDefinition` correspondente no tenant autenticado.
+
+Para `CustomFieldDefinition`, o payload pode omitir `options` quando `dataType` for diferente de `List`.
+Nesses casos, o backend deve tratar a colecao como vazia.
 
 ## Endpoints recomendados da fase
 
@@ -147,7 +153,7 @@ O servico de aplicacao deve resolver `fieldKey` para `CustomFieldDefinition`.
 
 ## Indices recomendados
 
-- `TenantId, EntityType, NormalizedKey` em `CustomFieldDefinition`
+- `TenantId, EntityType, SortOrder` em `CustomFieldDefinition`
 - `TenantId, EntityType, EntityId` em `CustomFieldValue`
 - `CustomFieldDefinitionId` em `CustomFieldValue`
 

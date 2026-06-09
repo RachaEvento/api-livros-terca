@@ -54,5 +54,10 @@ public sealed class UserConfiguration : IEntityTypeConfiguration<User>
             .WithMany(entity => entity.Users)
             .HasForeignKey(entity => entity.TenantId)
             .OnDelete(DeleteBehavior.Restrict);
+
+        builder.HasOne(entity => entity.UserProfile)
+            .WithOne(entity => entity.User)
+            .HasForeignKey<UserProfile>(entity => entity.UserId)
+            .OnDelete(DeleteBehavior.Restrict);
     }
 }

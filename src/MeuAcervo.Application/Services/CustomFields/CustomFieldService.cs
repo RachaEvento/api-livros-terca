@@ -6,7 +6,6 @@ using MeuAcervo.Application.Common.Exceptions;
 using MeuAcervo.Application.DTOs.CustomFields;
 using MeuAcervo.Domain.Entities;
 using MeuAcervo.Domain.Enums;
-using MeuAcervo.Shared.Text;
 
 namespace MeuAcervo.Application.Services.CustomFields;
 
@@ -51,25 +50,15 @@ public sealed class CustomFieldService : ICustomFieldService
     {
         await _createCustomFieldDefinitionRequestValidator.ValidateAndThrowAsync(request, cancellationToken);
 
-        var normalizedKey = NormalizeKey(request.Key);
-        if (await _customFieldRepository.NormalizedKeyExistsAsync(tenantId, request.EntityType, normalizedKey, null, cancellationToken))
-        {
-            throw new ConflictException("A custom field with the same normalized key already exists for this entity type.");
-        }
-
         var definition = new CustomFieldDefinition
         {
             TenantId = tenantId,
             EntityType = request.EntityType,
-            Key = request.Key.Trim(),
-            NormalizedKey = normalizedKey,
             Label = request.Label.Trim(),
             DataType = request.DataType,
-            IsRequired = request.IsRequired,
             IsPublic = request.IsPublic,
             IsActive = request.IsActive,
-            SortOrder = request.SortOrder,
-            ConfigurationJson = TrimOrNull(request.ConfigurationJson)
+            SortOrder = await _customFieldRepository.GetNextDefinitionSortOrderAsync(tenantId, request.EntityType, cancellationToken)
         };
 
         SyncOptions(definition, request.Options);
@@ -92,13 +81,10 @@ public sealed class CustomFieldService : ICustomFieldService
         }
 
         definition.Label = request.Label.Trim();
-        definition.IsRequired = request.IsRequired;
         definition.IsPublic = request.IsPublic;
         definition.IsActive = request.IsActive;
-        definition.SortOrder = request.SortOrder;
-        definition.ConfigurationJson = TrimOrNull(request.ConfigurationJson);
 
-        SyncOptions(definition, request.Options);
+        SyncOptions(definition, request.Options, _customFieldRepository.AddOption);
 
         await _applicationDbContext.SaveChangesAsync(cancellationToken);
         return MapDefinitionResponse(definition);
@@ -120,31 +106,19 @@ public sealed class CustomFieldService : ICustomFieldService
         var libraryItem = await _userLibraryRepository.GetTrackedItemAsync(tenantId, userId, libraryItemId, cancellationToken)
                           ?? throw new NotFoundException("Library item was not found for the authenticated user.");
 
-        var normalizedKeys = request.Values.Select(value => NormalizeKey(value.FieldKey)).ToArray();
-        var definitionsByKey = await _customFieldRepository.GetDefinitionsByNormalizedKeysAsync(
+        var definitionIds = request.Values.Select(value => value.DefinitionId).ToArray();
+        var definitionsById = await _customFieldRepository.GetDefinitionsByIdsAsync(
             tenantId,
             CustomFieldEntityType.UserLibraryItem,
-            normalizedKeys,
+            definitionIds,
             cancellationToken);
 
-        if (definitionsByKey.Count != normalizedKeys.Length)
+        if (definitionsById.Count != definitionIds.Length)
         {
-            throw new NotFoundException("One or more custom field keys were not found for the authenticated tenant.");
-        }
-
-        var activeDefinitions = await _customFieldRepository.GetDefinitionsAsync(tenantId, CustomFieldEntityType.UserLibraryItem, includeInactive: false, cancellationToken);
-        var requiredDefinitionKeys = activeDefinitions
-            .Where(definition => definition.IsRequired)
-            .Select(definition => definition.NormalizedKey)
-            .ToHashSet(StringComparer.OrdinalIgnoreCase);
-
-        if (requiredDefinitionKeys.Any(requiredKey => !definitionsByKey.ContainsKey(requiredKey)))
-        {
-            throw new BusinessRuleException("All active required custom fields must be provided in the request.");
+            throw new NotFoundException("One or more custom field definitions were not found for the authenticated tenant.");
         }
 
         var existingValues = await _customFieldRepository.GetValuesAsync(tenantId, CustomFieldEntityType.UserLibraryItem, libraryItem.Id, cancellationToken);
-        var existingValuesByDefinitionId = existingValues.ToDictionary(value => value.CustomFieldDefinitionId);
 
         foreach (var existingValue in existingValues)
         {
@@ -153,8 +127,7 @@ public sealed class CustomFieldService : ICustomFieldService
 
         foreach (var input in request.Values)
         {
-            var normalizedKey = NormalizeKey(input.FieldKey);
-            var definition = definitionsByKey[normalizedKey];
+            var definition = definitionsById[input.DefinitionId];
 
             ValidateValueAgainstDefinition(definition, input);
 
@@ -188,22 +161,31 @@ public sealed class CustomFieldService : ICustomFieldService
             .ToArray();
     }
 
-    private static void SyncOptions(CustomFieldDefinition definition, IReadOnlyCollection<CustomFieldOptionRequest> optionRequests)
+    private static void SyncOptions(
+        CustomFieldDefinition definition,
+        IReadOnlyCollection<CustomFieldOptionRequest> optionRequests,
+        Action<CustomFieldOption>? registerNewOption = null)
     {
         definition.Options.Clear();
 
-        foreach (var optionRequest in optionRequests
-                     .OrderBy(option => option.SortOrder)
-                     .ThenBy(option => option.Label, StringComparer.OrdinalIgnoreCase))
+        var sortOrder = 1;
+
+        foreach (var optionRequest in optionRequests)
         {
-            definition.Options.Add(new CustomFieldOption
+            var option = new CustomFieldOption
             {
                 TenantId = definition.TenantId,
                 CustomFieldDefinitionId = definition.Id,
                 Value = optionRequest.Value.Trim(),
                 Label = optionRequest.Label.Trim(),
-                SortOrder = optionRequest.SortOrder
-            });
+                SortOrder = sortOrder++
+            };
+
+            definition.Options.Add(option);
+
+            // Existing tracked definitions need new options explicitly marked as Added,
+            // otherwise EF treats GUID-backed dependents as updates and SaveChanges fails.
+            registerNewOption?.Invoke(option);
         }
     }
 
@@ -216,7 +198,7 @@ public sealed class CustomFieldService : ICustomFieldService
             case CustomFieldDataType.Date when !input.DateValue.HasValue:
             case CustomFieldDataType.Boolean when !input.BooleanValue.HasValue:
             case CustomFieldDataType.List when string.IsNullOrWhiteSpace(input.OptionValue):
-                throw new BusinessRuleException($"Custom field '{definition.Key}' expects a value compatible with {definition.DataType}.");
+                throw new BusinessRuleException($"Custom field '{definition.Label}' expects a value compatible with {definition.DataType}.");
         }
 
         if (definition.DataType == CustomFieldDataType.List)
@@ -224,7 +206,7 @@ public sealed class CustomFieldService : ICustomFieldService
             var allowedOptions = definition.Options.Select(option => option.Value).ToHashSet(StringComparer.OrdinalIgnoreCase);
             if (!allowedOptions.Contains(input.OptionValue!.Trim()))
             {
-                throw new BusinessRuleException($"The option informed for custom field '{definition.Key}' does not exist.");
+                throw new BusinessRuleException($"The option informed for custom field '{definition.Label}' does not exist.");
             }
         }
     }
@@ -234,18 +216,14 @@ public sealed class CustomFieldService : ICustomFieldService
         return new CustomFieldDefinitionResponse(
             definition.Id,
             definition.EntityType,
-            definition.Key,
             definition.Label,
             definition.DataType,
-            definition.IsRequired,
             definition.IsPublic,
             definition.IsActive,
-            definition.SortOrder,
-            definition.ConfigurationJson,
             definition.Options
                 .OrderBy(option => option.SortOrder)
                 .ThenBy(option => option.Label)
-                .Select(option => new CustomFieldOptionResponse(option.Id, option.Value, option.Label, option.SortOrder))
+                .Select(option => new CustomFieldOptionResponse(option.Id, option.Value, option.Label))
                 .ToArray(),
             definition.CreatedAtUtc,
             definition.UpdatedAtUtc);
@@ -256,7 +234,6 @@ public sealed class CustomFieldService : ICustomFieldService
         var definition = value.CustomFieldDefinition!;
         return new CustomFieldValueResponse(
             definition.Id,
-            definition.Key,
             definition.Label,
             definition.DataType,
             definition.IsPublic,
@@ -267,14 +244,10 @@ public sealed class CustomFieldService : ICustomFieldService
             value.OptionValue);
     }
 
-    private static string NormalizeKey(string key)
-    {
-        return TextNormalizationHelper.Slugify(key);
-    }
-
     private static string? TrimOrNull(string? value)
     {
         var trimmed = value?.Trim();
         return string.IsNullOrWhiteSpace(trimmed) ? null : trimmed;
     }
+
 }

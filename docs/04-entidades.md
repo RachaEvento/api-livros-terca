@@ -21,7 +21,6 @@ O sistema é dividido em quatro áreas principais de dados:
 | `Permission` | global | catálogo de permissões |
 | `UserRole` | tenant | vínculo entre usuário e papel |
 | `RolePermission` | tenant/global | vínculo entre papel e permissão |
-| `RefreshToken` | tenant | renovação de sessão |
 
 ### Catálogo bibliográfico
 
@@ -40,8 +39,6 @@ O sistema é dividido em quatro áreas principais de dados:
 | --- | --- | --- |
 | `UserLibraryItem` | tenant | item do acervo ou wishlist |
 | `ReadingProgressEntry` | tenant | histórico de progresso |
-| `Tag` | tenant | tag customizada |
-| `UserLibraryItemTag` | tenant | relacionamento N:N item-tag |
 | `Review` | tenant | avaliação, resenha ou nota publicada |
 | `Loan` | tenant | empréstimo de item físico |
 
@@ -99,27 +96,6 @@ Observações:
 
 - a persistência pode manter campos normalizados para garantir unicidade case-insensitive de email e username
 - o valor exibido ao usuário pode permanecer no formato original informado no cadastro
-
-### RefreshToken
-
-Campos sugeridos:
-
-- `Id`
-- `TenantId`
-- `UserId`
-- `TokenHash`
-- `JwtId`
-- `ExpiresAtUtc`
-- `RevokedAtUtc`
-- `CreatedAtUtc`
-- `CreatedByIp`
-- `ReplacedByTokenHash`
-
-Observações:
-
-- o valor bruto do refresh token nunca deve ser persistido
-- `JwtId` permite rastrear a sessão emitida
-- um refresh token rotacionado deve apontar para o hash substituto em `ReplacedByTokenHash`
 
 ### BookWork
 
@@ -312,7 +288,6 @@ Campos sugeridos:
 - `BookEdition N:N Authors`
 - `User 1:N UserLibraryItems`
 - `BookEdition 1:N UserLibraryItems`
-- `UserLibraryItem N:N Tags`
 - `UserLibraryItem 1:N ReadingProgressEntries`
 - `UserLibraryItem 1:0..1 Review`
 - `UserLibraryItem 1:N Loans`
@@ -326,10 +301,9 @@ Aplicar auditoria básica em todas as entidades relevantes.
 Soft delete recomendado para:
 
 - `UserLibraryItem`
-- `Tag`
 - `Review` se a estratégia de negócio exigir recuperação
 - `CustomFieldDefinition`
 
 ## Observação importante
 
-O catálogo bibliográfico é global e normalizado. O acervo, reviews, tags, empréstimos e campos customizados são dados do tenant e nunca podem vazar entre usuários.
+O catálogo bibliográfico é global e normalizado. O acervo, reviews, empréstimos e campos customizados são dados do tenant e nunca podem vazar entre usuários.

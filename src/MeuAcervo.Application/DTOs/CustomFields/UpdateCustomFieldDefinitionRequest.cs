@@ -2,12 +2,15 @@ using MeuAcervo.Domain.Enums;
 
 namespace MeuAcervo.Application.DTOs.CustomFields;
 
-public sealed record UpdateCustomFieldDefinitionRequest(
-    string Label,
-    CustomFieldDataType DataType,
-    bool IsRequired,
-    bool IsPublic,
-    bool IsActive,
-    int SortOrder,
-    string? ConfigurationJson,
-    IReadOnlyCollection<CustomFieldOptionRequest> Options);
+public sealed record UpdateCustomFieldDefinitionRequest
+{
+    public string Label { get; init; } = string.Empty;
+
+    public CustomFieldDataType DataType { get; init; }
+
+    public bool IsPublic { get; init; }
+
+    public bool IsActive { get; init; }
+
+    public IReadOnlyCollection<CustomFieldOptionRequest> Options { get; init; } = [];
+}

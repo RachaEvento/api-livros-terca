@@ -47,14 +47,6 @@ public sealed class IdentityRepository : IIdentityRepository
             cancellationToken);
     }
 
-    public Task<RefreshToken?> GetRefreshTokenByHashAsync(string tokenHash, CancellationToken cancellationToken = default)
-    {
-        return _dbContext.RefreshTokens
-            .Include(refreshToken => refreshToken.User)
-            .ThenInclude(user => user!.Tenant)
-            .FirstOrDefaultAsync(refreshToken => refreshToken.TokenHash == tokenHash, cancellationToken);
-    }
-
     public async Task<IReadOnlyCollection<Permission>> GetAllPermissionsAsync(CancellationToken cancellationToken = default)
     {
         return await _dbContext.Permissions
@@ -115,8 +107,4 @@ public sealed class IdentityRepository : IIdentityRepository
         _dbContext.RolePermissions.AddRange(rolePermissions);
     }
 
-    public void AddRefreshToken(RefreshToken refreshToken)
-    {
-        _dbContext.RefreshTokens.Add(refreshToken);
-    }
 }

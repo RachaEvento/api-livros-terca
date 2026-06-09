@@ -77,7 +77,6 @@ Filtros devem ser especificos por recurso, por exemplo:
 - `status`
 - `shelf`
 - `favorite`
-- `tagId`
 - `author`
 - `search`
 
@@ -92,6 +91,16 @@ No modulo de acervo da v1, o recurso `library-items` deve aceitar ao menos:
 - `search`
 - `updatedFrom`
 - `updatedTo`
+
+No modulo publico de perfil, o recurso `users/{username}/library` deve aceitar ao menos:
+
+- `shelfType`
+- `readingStatus`
+- `isFavorite`
+- `acquisitionFormat`
+- `author`
+- `title`
+- `search`
 
 ## Versionamento
 

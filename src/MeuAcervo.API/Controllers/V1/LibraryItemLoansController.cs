@@ -35,6 +35,26 @@ public sealed class LibraryItemLoansController : ApiControllerBase
         return StatusCodeResponse(StatusCodes.Status201Created, response);
     }
 
+    [HttpPatch("{loanId:guid}/return")]
+    [Authorize(Policy = AuthorizationPolicies.CanManageLoans)]
+    [ProducesResponseType(typeof(ApiResponse<LoanResponse>), StatusCodes.Status200OK)]
+    public async Task<ActionResult<ApiResponse<LoanResponse>>> Return(
+        Guid libraryItemId,
+        Guid loanId,
+        [FromBody] ReturnLoanRequest request,
+        CancellationToken cancellationToken)
+    {
+        var (tenantId, userId) = EnsureAuthenticatedContext();
+        var response = await _loanService.ReturnAsync(
+            tenantId,
+            userId,
+            libraryItemId,
+            loanId,
+            request,
+            cancellationToken);
+        return OkResponse(response);
+    }
+
     private (Guid TenantId, Guid UserId) EnsureAuthenticatedContext()
     {
         if (!_currentUserContext.TenantId.HasValue || !_currentUserContext.UserId.HasValue)

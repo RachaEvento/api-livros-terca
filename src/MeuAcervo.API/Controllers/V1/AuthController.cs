@@ -27,7 +27,7 @@ public sealed class AuthController : ApiControllerBase
     [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status409Conflict)]
     public async Task<ActionResult<ApiResponse<AuthSessionResponse>>> Register(RegisterRequest request, CancellationToken cancellationToken)
     {
-        var response = await _authService.RegisterAsync(request, GetClientIpAddress(), cancellationToken);
+        var response = await _authService.RegisterAsync(request, cancellationToken);
         return StatusCodeResponse(StatusCodes.Status201Created, response);
     }
 
@@ -38,18 +38,7 @@ public sealed class AuthController : ApiControllerBase
     [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status401Unauthorized)]
     public async Task<ActionResult<ApiResponse<AuthSessionResponse>>> Login(LoginRequest request, CancellationToken cancellationToken)
     {
-        var response = await _authService.LoginAsync(request, GetClientIpAddress(), cancellationToken);
-        return OkResponse(response);
-    }
-
-    [AllowAnonymous]
-    [HttpPost("refresh")]
-    [ProducesResponseType(typeof(ApiResponse<AuthSessionResponse>), StatusCodes.Status200OK)]
-    [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status400BadRequest)]
-    [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status401Unauthorized)]
-    public async Task<ActionResult<ApiResponse<AuthSessionResponse>>> Refresh(RefreshTokenRequest request, CancellationToken cancellationToken)
-    {
-        var response = await _authService.RefreshAsync(request, GetClientIpAddress(), cancellationToken);
+        var response = await _authService.LoginAsync(request, cancellationToken);
         return OkResponse(response);
     }
 
@@ -57,16 +46,11 @@ public sealed class AuthController : ApiControllerBase
     [HttpPost("logout")]
     [ProducesResponseType(typeof(ApiResponse<LogoutResponse>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status401Unauthorized)]
-    [ProducesResponseType(typeof(ApiResponse<object>), StatusCodes.Status404NotFound)]
-    public async Task<ActionResult<ApiResponse<LogoutResponse>>> Logout(LogoutRequest request, CancellationToken cancellationToken)
+    public async Task<ActionResult<ApiResponse<LogoutResponse>>> Logout(CancellationToken cancellationToken)
     {
         EnsureAuthenticatedContext();
 
-        var response = await _authService.LogoutAsync(
-            _currentUserContext.UserId!.Value,
-            _currentUserContext.TenantId!.Value,
-            request,
-            cancellationToken);
+        var response = await _authService.LogoutAsync(cancellationToken);
 
         return OkResponse(response);
     }
@@ -93,10 +77,5 @@ public sealed class AuthController : ApiControllerBase
         {
             throw new UnauthorizedException("Authenticated context is incomplete.");
         }
-    }
-
-    private string? GetClientIpAddress()
-    {
-        return HttpContext.Connection.RemoteIpAddress?.ToString();
     }
 }

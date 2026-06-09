@@ -2,6 +2,7 @@ using FluentValidation;
 using MeuAcervo.Application.DTOs.CustomFields;
 using MeuAcervo.Application.Abstractions.Infrastructure;
 using MeuAcervo.Application.Abstractions.Library;
+using MeuAcervo.Application.Services.Books;
 using MeuAcervo.Application.Services.CustomFields;
 using MeuAcervo.Application.Common.Exceptions;
 using MeuAcervo.Application.DTOs.Library;
@@ -22,6 +23,7 @@ public sealed class UserLibraryService : IUserLibraryService
     private readonly IValidator<UpdateUserLibraryItemStatusRequest> _updateUserLibraryItemStatusRequestValidator;
     private readonly IValidator<RegisterReadingProgressRequest> _registerReadingProgressRequestValidator;
     private readonly ICustomFieldService _customFieldService;
+    private readonly IBookCatalogService _bookCatalogService;
 
     public UserLibraryService(
         IUserLibraryRepository userLibraryRepository,
@@ -31,7 +33,8 @@ public sealed class UserLibraryService : IUserLibraryService
         IValidator<UpdateUserLibraryItemRequest> updateUserLibraryItemRequestValidator,
         IValidator<UpdateUserLibraryItemStatusRequest> updateUserLibraryItemStatusRequestValidator,
         IValidator<RegisterReadingProgressRequest> registerReadingProgressRequestValidator,
-        ICustomFieldService customFieldService)
+        ICustomFieldService customFieldService,
+        IBookCatalogService bookCatalogService)
     {
         _userLibraryRepository = userLibraryRepository;
         _applicationDbContext = applicationDbContext;
@@ -41,6 +44,7 @@ public sealed class UserLibraryService : IUserLibraryService
         _updateUserLibraryItemStatusRequestValidator = updateUserLibraryItemStatusRequestValidator;
         _registerReadingProgressRequestValidator = registerReadingProgressRequestValidator;
         _customFieldService = customFieldService;
+        _bookCatalogService = bookCatalogService;
     }
 
     public async Task<PagedResult<UserLibraryItemListResponse>> GetItemsAsync(Guid tenantId, Guid userId, GetUserLibraryItemsRequest request, CancellationToken cancellationToken = default)
@@ -51,7 +55,6 @@ public sealed class UserLibraryService : IUserLibraryService
             request.Search?.Trim(),
             request.Title?.Trim(),
             request.Author?.Trim(),
-            request.TagId,
             request.ShelfType,
             request.ReadingStatus,
             request.IsFavorite,
@@ -77,22 +80,19 @@ public sealed class UserLibraryService : IUserLibraryService
     {
         await _createUserLibraryItemRequestValidator.ValidateAndThrowAsync(request, cancellationToken);
 
-        if (!await _userLibraryRepository.BookEditionExistsAsync(request.BookEditionId, cancellationToken))
-        {
-            throw new NotFoundException("The requested book edition was not found.");
-        }
+        var bookEditionId = await ResolveBookEditionIdAsync(request, cancellationToken);
 
-        if (await _userLibraryRepository.ActiveItemExistsAsync(tenantId, userId, request.BookEditionId, null, cancellationToken))
+        if (await _userLibraryRepository.ActiveItemExistsAsync(tenantId, userId, bookEditionId, null, cancellationToken))
         {
             throw new ConflictException("The authenticated user already has an active library item for this edition.");
         }
 
-        var pageCount = await _userLibraryRepository.GetBookEditionPageCountAsync(request.BookEditionId, cancellationToken);
+        var pageCount = await _userLibraryRepository.GetBookEditionPageCountAsync(bookEditionId, cancellationToken);
         var item = new UserLibraryItem
         {
             TenantId = tenantId,
             UserId = userId,
-            BookEditionId = request.BookEditionId,
+            BookEditionId = bookEditionId,
             ShelfType = request.ShelfType,
             ReadingStatus = request.ReadingStatus ?? InferInitialReadingStatus(request.ShelfType, request.CurrentPage, request.ProgressPercent, pageCount),
             AcquisitionFormat = request.AcquisitionFormat,
@@ -115,6 +115,28 @@ public sealed class UserLibraryService : IUserLibraryService
         await _applicationDbContext.SaveChangesAsync(cancellationToken);
 
         return await GetItemByIdAsync(tenantId, userId, item.Id, cancellationToken);
+    }
+
+    private async Task<Guid> ResolveBookEditionIdAsync(CreateUserLibraryItemRequest request, CancellationToken cancellationToken)
+    {
+        if (request.BookEditionId.HasValue)
+        {
+            if (!await _userLibraryRepository.BookEditionExistsAsync(request.BookEditionId.Value, cancellationToken))
+            {
+                throw new NotFoundException("The requested book edition was not found.");
+            }
+
+            return request.BookEditionId.Value;
+        }
+
+        var existingEditionId = await _bookCatalogService.ResolveExistingEditionIdAsync(request.Book!, cancellationToken);
+        if (existingEditionId.HasValue)
+        {
+            return existingEditionId.Value;
+        }
+
+        var importResponse = await _bookCatalogService.ImportAsync(request.Book!, cancellationToken);
+        return importResponse.Edition.Id;
     }
 
     public async Task<UserLibraryItemDetailResponse> GetItemByIdAsync(Guid tenantId, Guid userId, Guid itemId, CancellationToken cancellationToken = default)
@@ -457,13 +479,6 @@ public sealed class UserLibraryService : IUserLibraryService
                 entry.Notes))
             .ToArray();
 
-        var tags = item.UserLibraryItemTags
-            .Select(link => link.Tag)
-            .Where(tag => tag is not null)
-            .OrderBy(tag => tag!.Name)
-            .Select(tag => new UserLibraryItemTagResponse(tag!.Id, tag.Name, tag.Slug, tag.Color))
-            .ToArray();
-
         var review = item.Review is null
             ? null
             : new Application.DTOs.Reviews.ReviewResponse(
@@ -495,6 +510,6 @@ public sealed class UserLibraryService : IUserLibraryService
             })
             .ToArray();
 
-        return new UserLibraryItemDetailResponse(MapListResponse(item), progressEntries, tags, customFields, review, loans);
+        return new UserLibraryItemDetailResponse(MapListResponse(item), progressEntries, customFields, review, loans);
     }
 }

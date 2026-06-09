@@ -9,15 +9,17 @@ public interface ICustomFieldRepository
 
     Task<CustomFieldDefinition?> GetDefinitionByIdAsync(Guid tenantId, Guid definitionId, bool tracking, CancellationToken cancellationToken = default);
 
-    Task<IReadOnlyDictionary<string, CustomFieldDefinition>> GetDefinitionsByNormalizedKeysAsync(Guid tenantId, CustomFieldEntityType entityType, IReadOnlyCollection<string> normalizedKeys, CancellationToken cancellationToken = default);
+    Task<IReadOnlyDictionary<Guid, CustomFieldDefinition>> GetDefinitionsByIdsAsync(Guid tenantId, CustomFieldEntityType entityType, IReadOnlyCollection<Guid> definitionIds, CancellationToken cancellationToken = default);
 
     Task<IReadOnlyCollection<CustomFieldValue>> GetValuesAsync(Guid tenantId, CustomFieldEntityType entityType, Guid entityId, CancellationToken cancellationToken = default);
 
-    Task<bool> NormalizedKeyExistsAsync(Guid tenantId, CustomFieldEntityType entityType, string normalizedKey, Guid? excludingDefinitionId, CancellationToken cancellationToken = default);
+    Task<int> GetNextDefinitionSortOrderAsync(Guid tenantId, CustomFieldEntityType entityType, CancellationToken cancellationToken = default);
 
     void AddDefinition(CustomFieldDefinition definition);
 
     void RemoveDefinition(CustomFieldDefinition definition);
+
+    void AddOption(CustomFieldOption option);
 
     void AddValue(CustomFieldValue value);
 

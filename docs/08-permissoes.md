@@ -29,8 +29,6 @@ Na v1, o usuário recém-registrado recebe `Owner` em seu tenant pessoal.
 - `wishlist.write`
 - `reviews.read`
 - `reviews.write`
-- `tags.read`
-- `tags.write`
 - `loans.read`
 - `loans.write`
 - `custom-fields.read`
@@ -45,7 +43,6 @@ Exemplos:
 
 - `CanReadLibrary`
 - `CanWriteLibrary`
-- `CanManageTags`
 - `CanManageLoans`
 - `CanManageCustomFields`
 - `CanManageRoles`
@@ -80,12 +77,12 @@ Mesmo com um usuário por tenant na v1, manter RBAC desde o início evita retrab
 
 ## Matriz mínima esperada
 
-| Papel | Biblioteca | Tags | Reviews | Loans | Custom Fields | Perfil |
-| --- | --- | --- | --- | --- | --- | --- |
-| Owner | leitura/escrita | leitura/escrita | leitura/escrita | leitura/escrita | leitura/escrita | leitura/escrita |
-| Admin | leitura/escrita | leitura/escrita | leitura/escrita | leitura/escrita | leitura/escrita | leitura/escrita |
-| Member | leitura/escrita | leitura/escrita | leitura/escrita | leitura/escrita | leitura limitada | leitura/escrita |
-| Viewer | leitura | leitura | leitura | leitura | leitura | leitura |
+| Papel | Biblioteca | Reviews | Loans | Custom Fields | Perfil |
+| --- | --- | --- | --- | --- | --- |
+| Owner | leitura/escrita | leitura/escrita | leitura/escrita | leitura/escrita | leitura/escrita |
+| Admin | leitura/escrita | leitura/escrita | leitura/escrita | leitura/escrita | leitura/escrita |
+| Member | leitura/escrita | leitura/escrita | leitura/escrita | leitura limitada | leitura/escrita |
+| Viewer | leitura | leitura | leitura | leitura | leitura |
 
 ## Recomendação de implementação
 
@@ -98,7 +95,6 @@ Mesmo com um usuário por tenant na v1, manter RBAC desde o início evita retrab
 
 - `CanReadLibrary` -> `library.read`
 - `CanWriteLibrary` -> `library.write`
-- `CanManageTags` -> `tags.write`
 - `CanManageLoans` -> `loans.write`
 - `CanManageCustomFields` -> `custom-fields.write`
 - `CanManageRoles` -> `admin.roles.manage`

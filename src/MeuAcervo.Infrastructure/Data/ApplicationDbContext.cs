@@ -27,8 +27,6 @@ public sealed class ApplicationDbContext : DbContext, IApplicationDbContext
 
     public DbSet<RolePermission> RolePermissions => Set<RolePermission>();
 
-    public DbSet<RefreshToken> RefreshTokens => Set<RefreshToken>();
-
     public DbSet<Author> Authors => Set<Author>();
 
     public DbSet<Publisher> Publishers => Set<Publisher>();
@@ -45,10 +43,6 @@ public sealed class ApplicationDbContext : DbContext, IApplicationDbContext
 
     public DbSet<ReadingProgressEntry> ReadingProgressEntries => Set<ReadingProgressEntry>();
 
-    public DbSet<Tag> Tags => Set<Tag>();
-
-    public DbSet<UserLibraryItemTag> UserLibraryItemTags => Set<UserLibraryItemTag>();
-
     public DbSet<Review> Reviews => Set<Review>();
 
     public DbSet<Loan> Loans => Set<Loan>();
@@ -58,6 +52,8 @@ public sealed class ApplicationDbContext : DbContext, IApplicationDbContext
     public DbSet<CustomFieldOption> CustomFieldOptions => Set<CustomFieldOption>();
 
     public DbSet<CustomFieldValue> CustomFieldValues => Set<CustomFieldValue>();
+
+    public DbSet<UserProfile> UserProfiles => Set<UserProfile>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

@@ -30,6 +30,8 @@ public sealed class ReviewConfiguration : IEntityTypeConfiguration<Review>
 
         builder.HasIndex(entity => new { entity.TenantId, entity.Visibility });
 
+        builder.HasIndex(entity => new { entity.TenantId, entity.UserId, entity.Visibility, entity.PublishedAtUtc });
+
         builder.HasOne(entity => entity.User)
             .WithMany(entity => entity.Reviews)
             .HasForeignKey(entity => entity.UserId)

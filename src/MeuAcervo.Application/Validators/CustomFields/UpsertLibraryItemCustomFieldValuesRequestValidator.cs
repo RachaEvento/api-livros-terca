@@ -11,7 +11,7 @@ public sealed class UpsertLibraryItemCustomFieldValuesRequestValidator : Abstrac
             .SetValidator(new CustomFieldValueInputRequestValidator());
 
         RuleFor(request => request.Values)
-            .Must(values => values.Select(value => value.FieldKey.Trim()).Distinct(StringComparer.OrdinalIgnoreCase).Count() == values.Count)
-            .WithMessage("FieldKey values must not repeat in the same request.");
+            .Must(values => values.Select(value => value.DefinitionId).Distinct().Count() == values.Count)
+            .WithMessage("DefinitionId values must not repeat in the same request.");
     }
 }

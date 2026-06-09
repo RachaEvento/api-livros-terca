@@ -29,10 +29,8 @@ Garantir isolamento seguro entre usuários sem impedir evolução futura para te
 - `User`
 - `Role`
 - `UserRole`
-- `RefreshToken`
 - `UserLibraryItem`
 - `ReadingProgressEntry`
-- `Tag`
 - `Review`
 - `Loan`
 - `CustomFieldDefinition`
@@ -63,7 +61,7 @@ Nunca confiar em `TenantId` enviado pelo cliente quando o recurso pertence ao us
 - Entidades tenant-scoped devem implementar um contrato como `ITenantScoped`.
 - Repositórios devem filtrar por `TenantId`.
 - Pode ser usado `HasQueryFilter` no EF Core para reforço, sem depender apenas disso.
-- Em autenticação, login e refresh podem consultar dados globais necessários para localizar o usuário, mas a sessão emitida deve sempre carregar e reafirmar o `TenantId` correto.
+- Em autenticacao e login, consultas globais podem ser usadas para localizar o usuario, mas a sessao emitida deve sempre carregar e reafirmar o `TenantId` correto.
 
 ### Na API
 

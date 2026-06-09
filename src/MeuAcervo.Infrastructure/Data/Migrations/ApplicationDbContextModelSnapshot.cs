@@ -223,10 +223,6 @@ namespace MeuAcervo.Infrastructure.Data.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
-                    b.Property<string>("ConfigurationJson")
-                        .HasMaxLength(4000)
-                        .HasColumnType("character varying(4000)");
-
                     b.Property<DateTime>("CreatedAtUtc")
                         .HasColumnType("timestamp with time zone");
 
@@ -252,23 +248,10 @@ namespace MeuAcervo.Infrastructure.Data.Migrations
                     b.Property<bool>("IsPublic")
                         .HasColumnType("boolean");
 
-                    b.Property<bool>("IsRequired")
-                        .HasColumnType("boolean");
-
-                    b.Property<string>("Key")
-                        .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("character varying(100)");
-
                     b.Property<string>("Label")
                         .IsRequired()
                         .HasMaxLength(150)
                         .HasColumnType("character varying(150)");
-
-                    b.Property<string>("NormalizedKey")
-                        .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("character varying(100)");
 
                     b.Property<int>("SortOrder")
                         .HasColumnType("integer");
@@ -281,9 +264,7 @@ namespace MeuAcervo.Infrastructure.Data.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("TenantId", "EntityType", "NormalizedKey")
-                        .IsUnique()
-                        .HasFilter("\"IsDeleted\" = FALSE");
+                    b.HasIndex("TenantId", "EntityType", "SortOrder");
 
                     b.ToTable("custom_field_definitions", (string)null);
                 });
@@ -577,22 +558,6 @@ namespace MeuAcervo.Infrastructure.Data.Migrations
                         },
                         new
                         {
-                            Id = new Guid("8a0fbd47-0cfe-48a0-8d35-a76215ce2807"),
-                            Code = "tags.read",
-                            CreatedAtUtc = new DateTime(2026, 5, 25, 0, 0, 0, 0, DateTimeKind.Utc),
-                            Description = "Permite visualizar tags.",
-                            UpdatedAtUtc = new DateTime(2026, 5, 25, 0, 0, 0, 0, DateTimeKind.Utc)
-                        },
-                        new
-                        {
-                            Id = new Guid("584214b8-c3f7-4458-b34b-a2c5d3ca1308"),
-                            Code = "tags.write",
-                            CreatedAtUtc = new DateTime(2026, 5, 25, 0, 0, 0, 0, DateTimeKind.Utc),
-                            Description = "Permite alterar tags.",
-                            UpdatedAtUtc = new DateTime(2026, 5, 25, 0, 0, 0, 0, DateTimeKind.Utc)
-                        },
-                        new
-                        {
                             Id = new Guid("c80d8454-c9b3-45d9-b794-948b25a9a809"),
                             Code = "loans.read",
                             CreatedAtUtc = new DateTime(2026, 5, 25, 0, 0, 0, 0, DateTimeKind.Utc),
@@ -720,60 +685,6 @@ namespace MeuAcervo.Infrastructure.Data.Migrations
                     b.ToTable("reading_progress_entries", (string)null);
                 });
 
-            modelBuilder.Entity("MeuAcervo.Domain.Entities.RefreshToken", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
-
-                    b.Property<DateTime>("CreatedAtUtc")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<string>("CreatedByIp")
-                        .HasMaxLength(64)
-                        .HasColumnType("character varying(64)");
-
-                    b.Property<DateTime>("ExpiresAtUtc")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<string>("JwtId")
-                        .IsRequired()
-                        .HasMaxLength(64)
-                        .HasColumnType("character varying(64)");
-
-                    b.Property<string>("ReplacedByTokenHash")
-                        .HasMaxLength(512)
-                        .HasColumnType("character varying(512)");
-
-                    b.Property<DateTime?>("RevokedAtUtc")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<Guid>("TenantId")
-                        .HasColumnType("uuid");
-
-                    b.Property<string>("TokenHash")
-                        .IsRequired()
-                        .HasMaxLength(512)
-                        .HasColumnType("character varying(512)");
-
-                    b.Property<DateTime>("UpdatedAtUtc")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<Guid>("UserId")
-                        .HasColumnType("uuid");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("TenantId");
-
-                    b.HasIndex("TokenHash")
-                        .IsUnique();
-
-                    b.HasIndex("UserId");
-
-                    b.ToTable("refresh_tokens", (string)null);
-                });
-
             modelBuilder.Entity("MeuAcervo.Domain.Entities.Review", b =>
                 {
                     b.Property<Guid>("Id")
@@ -836,6 +747,8 @@ namespace MeuAcervo.Infrastructure.Data.Migrations
                     b.HasIndex("TenantId", "UserId", "UserLibraryItemId")
                         .IsUnique()
                         .HasFilter("\"IsDeleted\" = FALSE");
+
+                    b.HasIndex("TenantId", "UserId", "Visibility", "PublishedAtUtc");
 
                     b.ToTable("reviews", (string)null);
                 });
@@ -901,54 +814,6 @@ namespace MeuAcervo.Infrastructure.Data.Migrations
                         .IsUnique();
 
                     b.ToTable("role_permissions", (string)null);
-                });
-
-            modelBuilder.Entity("MeuAcervo.Domain.Entities.Tag", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
-
-                    b.Property<string>("Color")
-                        .HasMaxLength(32)
-                        .HasColumnType("character varying(32)");
-
-                    b.Property<DateTime>("CreatedAtUtc")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<DateTime?>("DeletedAtUtc")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<string>("Description")
-                        .HasMaxLength(500)
-                        .HasColumnType("character varying(500)");
-
-                    b.Property<bool>("IsDeleted")
-                        .HasColumnType("boolean");
-
-                    b.Property<string>("Name")
-                        .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("character varying(100)");
-
-                    b.Property<string>("Slug")
-                        .IsRequired()
-                        .HasMaxLength(120)
-                        .HasColumnType("character varying(120)");
-
-                    b.Property<Guid>("TenantId")
-                        .HasColumnType("uuid");
-
-                    b.Property<DateTime>("UpdatedAtUtc")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("TenantId", "Slug")
-                        .IsUnique()
-                        .HasFilter("\"IsDeleted\" = FALSE");
-
-                    b.ToTable("tags", (string)null);
                 });
 
             modelBuilder.Entity("MeuAcervo.Domain.Entities.Tenant", b =>
@@ -1146,16 +1011,20 @@ namespace MeuAcervo.Infrastructure.Data.Migrations
                         .IsUnique()
                         .HasFilter("\"IsDeleted\" = FALSE");
 
+                    b.HasIndex("TenantId", "UserId", "FinishedAt");
+
                     b.HasIndex("TenantId", "UserId", "IsFavorite");
 
                     b.HasIndex("TenantId", "UserId", "ReadingStatus");
 
                     b.HasIndex("TenantId", "UserId", "ShelfType");
 
+                    b.HasIndex("TenantId", "UserId", "StartedAt");
+
                     b.ToTable("user_library_items", (string)null);
                 });
 
-            modelBuilder.Entity("MeuAcervo.Domain.Entities.UserLibraryItemTag", b =>
+            modelBuilder.Entity("MeuAcervo.Domain.Entities.UserProfile", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
@@ -1164,8 +1033,21 @@ namespace MeuAcervo.Infrastructure.Data.Migrations
                     b.Property<DateTime>("CreatedAtUtc")
                         .HasColumnType("timestamp with time zone");
 
-                    b.Property<Guid>("TagId")
-                        .HasColumnType("uuid");
+                    b.Property<string>("FavoriteQuoteOrHeadline")
+                        .HasMaxLength(280)
+                        .HasColumnType("character varying(280)");
+
+                    b.Property<bool>("IsPublicProfileEnabled")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("IsRecentActivityPublic")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("IsStatsPublic")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("IsWishlistPublic")
+                        .HasColumnType("boolean");
 
                     b.Property<Guid>("TenantId")
                         .HasColumnType("uuid");
@@ -1173,19 +1055,17 @@ namespace MeuAcervo.Infrastructure.Data.Migrations
                     b.Property<DateTime>("UpdatedAtUtc")
                         .HasColumnType("timestamp with time zone");
 
-                    b.Property<Guid>("UserLibraryItemId")
+                    b.Property<Guid>("UserId")
                         .HasColumnType("uuid");
 
                     b.HasKey("Id");
 
-                    b.HasIndex("TagId");
-
-                    b.HasIndex("UserLibraryItemId");
-
-                    b.HasIndex("TenantId", "UserLibraryItemId", "TagId")
+                    b.HasIndex("UserId")
                         .IsUnique();
 
-                    b.ToTable("user_library_item_tags", (string)null);
+                    b.HasIndex("TenantId", "IsPublicProfileEnabled");
+
+                    b.ToTable("user_profiles", (string)null);
                 });
 
             modelBuilder.Entity("MeuAcervo.Domain.Entities.UserRole", b =>
@@ -1319,17 +1199,6 @@ namespace MeuAcervo.Infrastructure.Data.Migrations
                     b.Navigation("UserLibraryItem");
                 });
 
-            modelBuilder.Entity("MeuAcervo.Domain.Entities.RefreshToken", b =>
-                {
-                    b.HasOne("MeuAcervo.Domain.Entities.User", "User")
-                        .WithMany("RefreshTokens")
-                        .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("User");
-                });
-
             modelBuilder.Entity("MeuAcervo.Domain.Entities.Review", b =>
                 {
                     b.HasOne("MeuAcervo.Domain.Entities.User", "User")
@@ -1409,23 +1278,15 @@ namespace MeuAcervo.Infrastructure.Data.Migrations
                     b.Navigation("User");
                 });
 
-            modelBuilder.Entity("MeuAcervo.Domain.Entities.UserLibraryItemTag", b =>
+            modelBuilder.Entity("MeuAcervo.Domain.Entities.UserProfile", b =>
                 {
-                    b.HasOne("MeuAcervo.Domain.Entities.Tag", "Tag")
-                        .WithMany("UserLibraryItemTags")
-                        .HasForeignKey("TagId")
+                    b.HasOne("MeuAcervo.Domain.Entities.User", "User")
+                        .WithOne("UserProfile")
+                        .HasForeignKey("MeuAcervo.Domain.Entities.UserProfile", "UserId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
-                    b.HasOne("MeuAcervo.Domain.Entities.UserLibraryItem", "UserLibraryItem")
-                        .WithMany("UserLibraryItemTags")
-                        .HasForeignKey("UserLibraryItemId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Tag");
-
-                    b.Navigation("UserLibraryItem");
+                    b.Navigation("User");
                 });
 
             modelBuilder.Entity("MeuAcervo.Domain.Entities.UserRole", b =>
@@ -1492,11 +1353,6 @@ namespace MeuAcervo.Infrastructure.Data.Migrations
                     b.Navigation("UserRoles");
                 });
 
-            modelBuilder.Entity("MeuAcervo.Domain.Entities.Tag", b =>
-                {
-                    b.Navigation("UserLibraryItemTags");
-                });
-
             modelBuilder.Entity("MeuAcervo.Domain.Entities.Tenant", b =>
                 {
                     b.Navigation("Roles");
@@ -1506,11 +1362,11 @@ namespace MeuAcervo.Infrastructure.Data.Migrations
 
             modelBuilder.Entity("MeuAcervo.Domain.Entities.User", b =>
                 {
-                    b.Navigation("RefreshTokens");
-
                     b.Navigation("Reviews");
 
                     b.Navigation("UserLibraryItems");
+
+                    b.Navigation("UserProfile");
 
                     b.Navigation("UserRoles");
                 });
@@ -1522,8 +1378,6 @@ namespace MeuAcervo.Infrastructure.Data.Migrations
                     b.Navigation("ReadingProgressEntries");
 
                     b.Navigation("Review");
-
-                    b.Navigation("UserLibraryItemTags");
                 });
 #pragma warning restore 612, 618
         }

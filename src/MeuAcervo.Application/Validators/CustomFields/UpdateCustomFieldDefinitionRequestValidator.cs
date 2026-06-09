@@ -12,9 +12,6 @@ public sealed class UpdateCustomFieldDefinitionRequestValidator : AbstractValida
             .NotEmpty()
             .MaximumLength(150);
 
-        RuleFor(request => request.ConfigurationJson)
-            .MaximumLength(4000);
-
         RuleForEach(request => request.Options)
             .SetValidator(new CustomFieldOptionRequestValidator());
 

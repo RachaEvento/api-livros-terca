@@ -48,6 +48,10 @@ public sealed class UserLibraryItemConfiguration : IEntityTypeConfiguration<User
 
         builder.HasIndex(entity => new { entity.TenantId, entity.UserId, entity.IsFavorite });
 
+        builder.HasIndex(entity => new { entity.TenantId, entity.UserId, entity.StartedAt });
+
+        builder.HasIndex(entity => new { entity.TenantId, entity.UserId, entity.FinishedAt });
+
         builder.HasIndex(entity => entity.BookEditionId);
 
         builder.HasIndex(entity => entity.UpdatedAtUtc);

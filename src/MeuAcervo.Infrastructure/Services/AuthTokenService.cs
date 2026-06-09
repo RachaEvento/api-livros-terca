@@ -1,6 +1,5 @@
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
-using System.Security.Cryptography;
 using System.Text;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.Extensions.Options;
@@ -52,21 +51,5 @@ public sealed class AuthTokenService : IAuthTokenService
             new JwtSecurityTokenHandler().WriteToken(token),
             jwtId,
             expiresAtUtc);
-    }
-
-    public RefreshTokenMaterial CreateRefreshToken()
-    {
-        var tokenBytes = RandomNumberGenerator.GetBytes(64);
-        var refreshToken = Base64UrlEncoder.Encode(tokenBytes);
-        var tokenHash = HashRefreshToken(refreshToken);
-        var expiresAtUtc = DateTime.UtcNow.AddDays(_jwtOptions.RefreshTokenDays);
-
-        return new RefreshTokenMaterial(refreshToken, tokenHash, expiresAtUtc);
-    }
-
-    public string HashRefreshToken(string refreshToken)
-    {
-        var hashBytes = SHA256.HashData(Encoding.UTF8.GetBytes(refreshToken));
-        return Convert.ToHexString(hashBytes);
     }
 }

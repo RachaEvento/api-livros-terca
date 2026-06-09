@@ -4,7 +4,6 @@ namespace MeuAcervo.Application.DTOs.CustomFields;
 
 public sealed record CustomFieldValueResponse(
     Guid DefinitionId,
-    string FieldKey,
     string Label,
     CustomFieldDataType DataType,
     bool IsPublic,

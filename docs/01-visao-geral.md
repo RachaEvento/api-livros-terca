@@ -1,8 +1,8 @@
-# Visão Geral
+# Visao Geral
 
-## Propósito
+## Proposito
 
-**Meu Acervo** é uma plataforma de gerenciamento de biblioteca pessoal inspirada em produtos como Goodreads, MyAnimeList e Letterboxd, mas especializada em **livros físicos e digitais**. O sistema deve ir além de um CRUD simples e permitir organização, leitura, avaliação, catalogação e compartilhamento parcial do acervo de cada usuário.
+**Meu Acervo** e uma plataforma de gerenciamento de biblioteca pessoal inspirada em produtos como Goodreads, MyAnimeList e Letterboxd, mas especializada em **livros fisicos e digitais**. O sistema deve ir alem de um CRUD simples e permitir organizacao, leitura, avaliacao, catalogacao e compartilhamento parcial do acervo de cada usuario.
 
 ## Objetivo do produto
 
@@ -10,20 +10,20 @@ Entregar uma API REST profissional para:
 
 - organizar acervos pessoais com isolamento por tenant
 - pesquisar livros em fontes externas
-- registrar edições específicas e formatos distintos
+- registrar edicoes especificas e formatos distintos
 - acompanhar progresso de leitura
-- armazenar avaliações, resenhas, tags e empréstimos
-- expor parcialmente um perfil público do leitor
+- armazenar avaliacoes, resenhas, emprestimos e campos customizados opcionais
+- expor parcialmente um perfil publico do leitor
 
 ## Persona principal
 
-- Leitor individual com biblioteca própria
-- Usuário que registra coleção física e digital
-- Usuário que deseja histórico de leitura e organização detalhada
+- leitor individual com biblioteca propria
+- usuario que registra colecao fisica e digital
+- usuario que deseja historico de leitura e organizacao detalhada
 
 ## Escopo funcional inicial
 
-O usuário poderá:
+O usuario podera:
 
 - criar conta e autenticar-se com JWT
 - manter um acervo pessoal isolado
@@ -33,10 +33,9 @@ O usuário poderá:
 - favoritar livros
 - avaliar livros de 1 a 5 estrelas
 - escrever resenhas e notas
-- criar tags personalizadas
 - cadastrar campos customizados
-- controlar empréstimos
-- consultar perfil público parcial
+- controlar emprestimos
+- consultar perfil publico parcial
 - pesquisar livros externos inicialmente via Open Library
 
 ## Status de leitura suportados
@@ -48,29 +47,27 @@ O usuário poderá:
 - `Abandoned`
 - `Rereading`
 
-## Formatos de item suportados
+## Formatos de aquisicao suportados no item
 
 - `Physical`
-- `Kindle`
-- `Pdf`
+- `Ebook`
 - `Audiobook`
-- `Manga`
-- `Comic`
+- `Other`
 
-## Princípios de domínio
+## Principios de dominio
 
-- O sistema não trata livro como registro único e simples.
-- Uma mesma obra pode ter múltiplas edições coexistindo.
-- O catálogo bibliográfico deve ser separado dos dados de uso do usuário.
-- O acervo do usuário é o centro da experiência.
-- A arquitetura deve suportar expansão para fontes externas adicionais e funcionalidades sociais futuras.
+- o sistema nao trata livro como registro unico e simples
+- uma mesma obra pode ter multiplas edicoes coexistindo
+- o catalogo bibliografico deve ser separado dos dados de uso do usuario
+- o acervo do usuario e o centro da experiencia
+- a arquitetura deve suportar expansao para fontes externas adicionais e funcionalidades sociais futuras
 
 ## Objetivos de qualidade
 
 - escalabilidade
 - modularidade
 - extensibilidade
-- segurança
+- seguranca
 - performance
 - manutenibilidade
 - desacoplamento de frontend
@@ -80,11 +77,11 @@ O usuário poderá:
 - seguidores
 - chat
 - feed social completo
-- recomendação inteligente
-- sincronização automática com dispositivos de leitura
-- testes automatizados obrigatórios nesta fase inicial
+- recomendacao inteligente
+- sincronizacao automatica com dispositivos de leitura
+- testes automatizados obrigatorios nesta fase inicial
 
-## Restrições tecnológicas
+## Restricoes tecnologicas
 
 - ASP.NET Core Web API
 - .NET 10 preferencialmente
@@ -98,23 +95,23 @@ O usuário poderá:
 
 ## Casos de uso principais
 
-1. Registrar e autenticar usuário.
+1. Registrar e autenticar usuario.
 2. Pesquisar livro em fonte externa.
-3. Importar ou vincular edição ao catálogo interno.
+3. Importar ou vincular edicao ao catalogo interno.
 4. Adicionar item ao acervo pessoal.
 5. Marcar status e progresso de leitura.
-6. Avaliar, comentar, favoritar e etiquetar um item.
+6. Avaliar, comentar e favoritar um item.
 7. Definir metadados customizados para o tenant.
-8. Registrar empréstimo de livro físico.
+8. Registrar emprestimo de livro fisico.
 9. Compartilhar parte do perfil publicamente.
 
-## Diretriz de implementação
+## Diretriz de implementacao
 
-Toda funcionalidade deve nascer de especificação clara em `docs/`, com contratos explícitos, regras de domínio definidas e atenção especial a:
+Toda funcionalidade deve nascer de especificacao clara em `docs/`, com contratos explicitos, regras de dominio definidas e atencao especial a:
 
 - multi-tenancy
-- consistência do catálogo
-- autenticação e autorização
-- paginação e filtros
+- consistencia do catalogo
+- autenticacao e autorizacao
+- paginacao e filtros
 - resposta padronizada
 - performance de consultas

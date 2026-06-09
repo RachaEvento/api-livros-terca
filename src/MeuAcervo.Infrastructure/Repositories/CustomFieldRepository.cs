@@ -45,7 +45,7 @@ public sealed class CustomFieldRepository : ICustomFieldRepository
             .FirstOrDefaultAsync(definition => definition.TenantId == tenantId && definition.Id == definitionId, cancellationToken);
     }
 
-    public async Task<IReadOnlyDictionary<string, CustomFieldDefinition>> GetDefinitionsByNormalizedKeysAsync(Guid tenantId, CustomFieldEntityType entityType, IReadOnlyCollection<string> normalizedKeys, CancellationToken cancellationToken = default)
+    public async Task<IReadOnlyDictionary<Guid, CustomFieldDefinition>> GetDefinitionsByIdsAsync(Guid tenantId, CustomFieldEntityType entityType, IReadOnlyCollection<Guid> definitionIds, CancellationToken cancellationToken = default)
     {
         return await _dbContext.CustomFieldDefinitions
             .Include(definition => definition.Options)
@@ -53,9 +53,9 @@ public sealed class CustomFieldRepository : ICustomFieldRepository
                 definition.TenantId == tenantId
                 && definition.EntityType == entityType
                 && definition.IsActive
-                && normalizedKeys.Contains(definition.NormalizedKey))
+                && definitionIds.Contains(definition.Id))
             .AsSplitQuery()
-            .ToDictionaryAsync(definition => definition.NormalizedKey, StringComparer.OrdinalIgnoreCase, cancellationToken);
+            .ToDictionaryAsync(definition => definition.Id, cancellationToken);
     }
 
     public async Task<IReadOnlyCollection<CustomFieldValue>> GetValuesAsync(Guid tenantId, CustomFieldEntityType entityType, Guid entityId, CancellationToken cancellationToken = default)
@@ -68,17 +68,14 @@ public sealed class CustomFieldRepository : ICustomFieldRepository
             .ToArrayAsync(cancellationToken);
     }
 
-    public Task<bool> NormalizedKeyExistsAsync(Guid tenantId, CustomFieldEntityType entityType, string normalizedKey, Guid? excludingDefinitionId, CancellationToken cancellationToken = default)
+    public async Task<int> GetNextDefinitionSortOrderAsync(Guid tenantId, CustomFieldEntityType entityType, CancellationToken cancellationToken = default)
     {
-        var query = _dbContext.CustomFieldDefinitions
-            .Where(definition => definition.TenantId == tenantId && definition.EntityType == entityType && definition.NormalizedKey == normalizedKey);
+        var currentMax = await _dbContext.CustomFieldDefinitions
+            .Where(definition => definition.TenantId == tenantId && definition.EntityType == entityType)
+            .Select(definition => (int?)definition.SortOrder)
+            .MaxAsync(cancellationToken);
 
-        if (excludingDefinitionId.HasValue)
-        {
-            query = query.Where(definition => definition.Id != excludingDefinitionId.Value);
-        }
-
-        return query.AnyAsync(cancellationToken);
+        return (currentMax ?? 0) + 1;
     }
 
     public void AddDefinition(CustomFieldDefinition definition)
@@ -89,6 +86,11 @@ public sealed class CustomFieldRepository : ICustomFieldRepository
     public void RemoveDefinition(CustomFieldDefinition definition)
     {
         _dbContext.CustomFieldDefinitions.Remove(definition);
+    }
+
+    public void AddOption(CustomFieldOption option)
+    {
+        _dbContext.CustomFieldOptions.Add(option);
     }
 
     public void AddValue(CustomFieldValue value)

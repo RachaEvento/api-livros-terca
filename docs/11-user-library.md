@@ -60,10 +60,6 @@ Representar a experiencia principal do produto: a relacao do usuario com livros,
 - por titulo
 - por data de atualizacao
 
-Observacao da v1:
-
-- filtro por tag entra quando o modulo de tags for materializado
-
 ## Ordenacao minima esperada
 
 - titulo
@@ -116,10 +112,53 @@ Isso permite mostrar leituras recentes e construir estatisticas futuras.
 
 `POST /api/v1/library-items`:
 
-- recebe `BookEditionId`
+- recebe `BookEditionId` quando a edicao ja existir no catalogo
+- alternativamente, recebe um objeto `book` com metadados bibliograficos normalizados vindos de `GET /api/v1/books/search`
 - recebe `ShelfType`
 - pode receber status inicial, favorito, notas privadas e metadados de posse
 - nunca recebe `TenantId` ou `UserId` do cliente
+- deve importar ou reconciliar a edicao automaticamente quando o cliente enviar `book` em vez de `BookEditionId`
+- deve vincular o item ao usuario autenticado a partir do JWT
+
+Payload sugerido:
+
+```json
+{
+  "bookEditionId": null,
+  "book": {
+    "source": "open-library",
+    "externalId": "OL12345M",
+    "workExternalId": "OL67890W",
+    "title": "Clean Architecture",
+    "workTitle": "Clean Architecture",
+    "authors": ["Robert C. Martin"],
+    "isbn10": "0134494164",
+    "isbn13": "9780134494166",
+    "publisher": "Prentice Hall",
+    "publishedYear": 2017,
+    "firstPublishedYear": 2017,
+    "language": "en",
+    "pageCount": 432,
+    "coverImageUrl": "https://...",
+    "externalUrl": "https://openlibrary.org/books/OL12345M",
+    "description": "..."
+  },
+  "shelfType": "Collection",
+  "readingStatus": "NotStarted",
+  "acquisitionFormat": "Physical",
+  "ownershipType": "Owned",
+  "isFavorite": false,
+  "privateNotes": "Comprado em sebo"
+}
+```
+
+Regras adicionais:
+
+- exatamente um entre `BookEditionId` e `book` deve ser informado
+- se `BookEditionId` for informado, a edicao deve existir no catalogo
+- se `book` for informado, o sistema deve resolver a edicao existente ou importa-la antes de criar o `UserLibraryItem`
+- se o usuario ja tiver um item ativo para a edicao resolvida, a API deve retornar conflito
+- a mesma logica de correspondencia de edicao usada aqui deve ser reutilizada por `GET /api/v1/books/search` para informar se o resultado ja pertence ao acervo do usuario autenticado
 
 `GET /api/v1/library-items`:
 

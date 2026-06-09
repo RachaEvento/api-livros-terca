@@ -7,9 +7,8 @@ public sealed class CustomFieldValueInputRequestValidator : AbstractValidator<Cu
 {
     public CustomFieldValueInputRequestValidator()
     {
-        RuleFor(request => request.FieldKey)
-            .NotEmpty()
-            .MaximumLength(100);
+        RuleFor(request => request.DefinitionId)
+            .NotEmpty();
 
         RuleFor(request => request.TextValue)
             .MaximumLength(4000);

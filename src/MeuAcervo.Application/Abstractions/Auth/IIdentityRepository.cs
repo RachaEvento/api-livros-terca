@@ -14,8 +14,6 @@ public interface IIdentityRepository
 
     Task<Role?> GetRoleByNameAsync(Guid tenantId, string roleName, CancellationToken cancellationToken = default);
 
-    Task<RefreshToken?> GetRefreshTokenByHashAsync(string tokenHash, CancellationToken cancellationToken = default);
-
     Task<IReadOnlyCollection<Permission>> GetAllPermissionsAsync(CancellationToken cancellationToken = default);
 
     Task<IReadOnlyCollection<string>> GetRoleNamesAsync(Guid userId, Guid tenantId, CancellationToken cancellationToken = default);
@@ -34,5 +32,4 @@ public interface IIdentityRepository
 
     void AddRolePermissions(IEnumerable<RolePermission> rolePermissions);
 
-    void AddRefreshToken(RefreshToken refreshToken);
 }
