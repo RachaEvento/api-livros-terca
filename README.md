@@ -1,5 +1,5 @@
 # Meu Acervo API
-
+Equipe: Miguel, Amanda, Diogo, Débora
 Backend em ASP.NET Core para o sistema **Meu Acervo**, uma plataforma de gerenciamento de biblioteca pessoal com catálogo bibliográfico normalizado, acervo multi-tenant e integração inicial com a Open Library.
 
 O projeto segue **Spec-Driven Development com apoio de IA**: a documentação em [docs](/C:/Users/migue/Desktop/DIVISAO-TERCA/api-livros-terca/docs) é a referência principal para comportamento, contratos e decisões arquiteturais.
